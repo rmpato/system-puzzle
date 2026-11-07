@@ -73,7 +73,7 @@ export default {
     { name: 'One city', dur: 30, rates: { ping: 4, match: 0.8, trip: 0.4 }, news: ['ping', 'trip'] },
     { name: 'More drivers', dur: 50, rates: { ping: 18, match: 2, tile: 2, eta: 1.5, trip: 0.9 }, news: ['tile', 'eta', 'Drivers ×3'], hazards: { duplicate: 0.1 } },
     { name: 'Friday night', dur: 55, rates: { ping: 28, match: 4.5, tile: 5, eta: 4, trip: 2 }, news: ['Riders ×3', 'Dispatch races'], hazards: { duplicate: 0.12, race: 9 } },
-    { name: 'Concert + rain', dur: 60, rates: { ping: 55, match: 9, tile: 9, eta: 8, trip: 4.5 }, news: ['Surge ×10'], hazards: { duplicate: 0.18, timeout: 0.12, race: 6, spike: 8, outage: [24, 40] } },
+    { name: 'Concert + rain', dur: 60, rates: { ping: 55, match: 11, tile: 9, eta: 10, trip: 5 }, news: ['Surge ×10'], hazards: { duplicate: 0.18, timeout: 0.12, race: 6, spike: 8, outage: [24, 40] } },
   ],
 
   hazards: {
