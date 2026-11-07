@@ -16,11 +16,16 @@ No build step. It needs internet access for Three.js (unpkg) and the fonts. Desk
 | Exercise | Difficulty | Core lessons |
 | --- | --- | --- |
 | 🔗 Tiny Links (URL shortener) | Easy | Read-heavy caching, ID generation, unique aliases, async click analytics, CDN for viral links |
-| 🛒 Marketplace Rush | Medium | Idempotent payments, connection pooling, read replicas, queues, stock races (from the Backend Engineer interview guide) |
+| ⌨️ Type Ahead (search autocomplete) | Medium | Debouncing, in-memory top-k trie, edge caching, offline log pipeline, trending terms |
+| 🛒 Marketplace Rush | Medium | Idempotent payments, connection pooling, read replicas, queues, reconciliation, stock races (from the Backend Engineer interview guide) |
 | 🎬 Video Night (YouTube-lite) | Medium | CDN playback, pre-signed uploads, async transcoding, batched view counters |
 | 💬 Chat at Scale (WhatsApp-like) | Hard | WebSockets vs polling, idempotent sends, ordering, presence in memory, offline push |
+| 📰 Social Feed (Twitter/Instagram) | Hard | Fan-out on write vs read, celebrity hot keys, timeline cache, batched like counters |
 | 🎟️ Ticket Drop (Ticketmaster) | Hard | Waiting room, seat holds with TTL, bot defense, payment reconciliation |
 | 🚕 Ride Hail (Uber-like) | Expert | Geo index for location pings, atomic dispatch, ETA caching, surge |
+| 💳 Money Moves (payments ledger) | Expert | Idempotency keys, double-entry ledger, row locks, reconciliation, transactional outbox |
+
+Every exercise ends with a real traffic surge (a viral link, a doorbuster, midnight on New Year's Eve, a concert letting out in the rain…).
 
 ## Modes
 
@@ -55,6 +60,7 @@ SCENARIOS.md            how to write a new exercise
 node tools/validate.mjs                 # all scenarios
 node tools/balance.mjs all 150          # balance report for every scenario
 node tools/balance.mjs rides 150        # one scenario
+# QA: open http://localhost:5199/?debug#<id> to get window.__sim in the console
 FLAGS=1 node tools/balance.mjs src/scenarios/my-new.js 150
 ```
 

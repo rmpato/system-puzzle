@@ -856,6 +856,7 @@ function pickerScreen() {
 function choose(scenario) {
   buildWorld(scenario);
   hookSim();
+  if (new URLSearchParams(location.search).has('debug')) window.__sim = sim; // QA only: ?debug
   briefScreen();
 }
 function briefScreen() {
