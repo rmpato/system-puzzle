@@ -114,12 +114,24 @@ export const PUZZLES = {
     ],
     signal: 'Right store for each kind of data', flag: 'Mixed up cache, source of truth and analytics',
   },
+  status: {
+    kind: 'sort', icon: '↪️', title: '301 or 302?', text: 'Pick the redirect for each link.',
+    buckets: ['📌 301 Permanent', '🔁 302 Temporary'],
+    items: [
+      { t: 'Pro link with click stats', a: 1, why: '301 is cached; clicks skip us' },
+      { t: 'Campaign link, target may change', a: 1 },
+      { t: 'A/B test destination', a: 1 },
+      { t: 'Old domain moved for good', a: 0 },
+      { t: 'Docs link, never edited, no stats', a: 0, why: 'Cache it forever, save load' },
+    ],
+    signal: 'Knows the 301 vs 302 trade-off', flag: 'Unclear on 301 vs 302',
+  },
 };
 
 // Whiteboard breaks happen before the phase with that index.
 export const BREAKS = {
   1: ['flow', 'fields', 'length'],
   2: ['routing', 'http', 'index'],
-  3: ['edit', 'expiry'],
+  3: ['status', 'edit', 'expiry'],
 };
 export const FINALS = ['final', 'reverse'];
