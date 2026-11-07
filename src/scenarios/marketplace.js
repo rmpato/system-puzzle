@@ -35,7 +35,8 @@ export default {
     { id: 'cdn', icon: '🌐', name: 'CDN', cost: 160, desc: 'Images skip the API', model: 'cloud', pos: [-8, -7.5], label: 'CDN', symptom: 'type:image', relieves: 'api' },
     { id: 'search', icon: '🔍', name: 'Search index', cost: 220, desc: 'Cheap search', model: 'octa', color: '#d5c5ff', pos: [5.5, -7], label: 'Search index', symptom: 'type:search', relieves: 'api' },
     { id: 'idem', icon: '🔑', name: 'Idem. keys', cost: 130, desc: 'No double charges', model: 'key', color: '#ffd76a', pos: [-2.1, 11.1], label: 'Idempotency', symptom: 'hazard:duplicate', proactive: 1 },
-    { id: 'queue', icon: '📬', name: 'Queue', cost: 200, desc: 'Survives outages & timeouts', model: 'tube', color: '#dbe2ec', pos: [8, 11], label: 'Queue', symptom: ['outage', 'hazard:timeout'], proactive: 2 },
+    { id: 'queue', icon: '📬', name: 'Queue', cost: 200, desc: 'Notifications survive outages', model: 'tube', color: '#dbe2ec', pos: [8, 11], label: 'Queue', symptom: 'outage', proactive: 2 },
+    { id: 'recon', icon: '🔁', name: 'Reconciler', cost: 140, desc: 'Settles pending payments', model: 'gear', color: '#c7d2fe', pos: [-5.5, 6.5], label: 'Reconciler', symptom: 'hazard:timeout', proactive: 3 },
     { id: 'lock', icon: '🔒', name: 'Stock lock', cost: 120, desc: 'No overselling', model: 'lock', color: '#cfd6e2', pos: [12, 3.8], label: 'Stock lock', symptom: 'hazard:race', proactive: 3 },
     { id: 'k8s', icon: '☸️', name: 'Kubernetes', cost: 350, upkeep: 2, trap: true, desc: '+capacity · costs $2/s', model: 'wheel', pos: [0, 0], ghost: 9.6, label: 'Kubernetes' },
     { id: 'micro', icon: '🧩', name: 'Microservices', cost: 300, upkeep: 2, trap: true, desc: '+capacity · costs $2/s', model: 'cluster', pos: [0, 5.6], ghost: 4.6, label: '8 services' },
@@ -55,6 +56,7 @@ export default {
     ['psp', 'queue', { if: 'queue' }],
     ['queue', 'notify', { if: 'queue' }],
     ['psp', 'notify', { unless: 'queue' }],
+    ['recon', 'psp', { if: 'recon', dashed: true }],
   ],
 
   types: {
@@ -74,7 +76,7 @@ export default {
 
   hazards: {
     duplicate: { type: 'checkout', fix: 'idem', card: 'double', rep: 4, money: 10, text: '💸 charged twice', blocked: '🔑 duplicate ignored', at: 'psp', firstText: 'First double charge', score: 10 },
-    timeout: { type: 'checkout', fix: 'queue', card: 'timeout', rep: 1, text: '⏳ sale lost', at: 'psp', firstText: 'Payment timeout lost a sale', score: 5 },
+    timeout: { type: 'checkout', fix: 'recon', card: 'timeout', rep: 1, text: '⏳ sale lost', at: 'psp', firstText: 'Payment timeout lost a sale', score: 5 },
     race: { type: 'checkout', fix: 'lock', card: 'race', rep: 5, money: 25, text: '🏁 oversold', blocked: '🔒 sold out', at: 'db', firstText: 'Oversold the last item', startText: 'Limited drops started (last-item races)', score: 15 },
     outage: { node: 'notify', label: 'Notification service', card: 'notify', rep: 1.5, startText: 'Notification service went down', lostText: 'Notifications were lost during the outage', event: { to: 'notify', via: 'queue', type: 'notif' }, score: 2 },
     spike: { card: 'spike' },

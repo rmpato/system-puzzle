@@ -48,7 +48,7 @@ export const CARDS = {
     o('Queue absorbs it; scale consumers', true, 'Buffer, then drain in parallel.'),
     o('Call the notifier synchronously', false, 'Checkout slows to its speed.'),
     o('Drop notifications under load', false, 'Stores miss orders on the busiest day.')] },
-  timeout: { icon: '⏳', title: 'Payment timed out', text: 'Did it charge or not?', fix: 'queue', opts: [
+  timeout: { icon: '⏳', title: 'Payment timed out', text: 'Did it charge or not?', fix: 'recon', opts: [
     o('Mark pending, then reconcile', true, 'Ask the provider by idempotency key.'),
     o('Assume failed, charge again', false, 'Might charge twice.'),
     o('Assume success, ship it', false, 'Might ship for free.')] },
