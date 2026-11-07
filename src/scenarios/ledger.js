@@ -32,7 +32,7 @@ export default {
     { id: 'lock', icon: '🔒', name: 'Row lock', cost: 160, desc: 'FOR UPDATE: no overdrafts', model: 'lock', color: '#cfd6e2', pos: [12, 3.8], label: 'Row lock', symptom: 'hazard:race', proactive: 2 },
     { id: 'recon', icon: '⚙️', name: 'Reconciler', cost: 160, desc: 'Resolves pending bank calls', model: 'gear', color: '#c7d2fe', pos: [-5.5, 8.5], label: 'Reconciler', symptom: 'hazard:timeout', proactive: 1 },
     { id: 'outbox', icon: '📬', name: 'Outbox', cost: 200, desc: 'Webhooks retried, never lost', model: 'tube', color: '#dbe2ec', pos: [8, 11], label: 'Outbox → queue', symptom: 'outage', proactive: 2 },
-    { id: 'risk', icon: '🕵️', name: 'Async risk', cost: 200, desc: 'ML scoring off the hot path', model: 'shield', color: '#ffcf8a', pos: [-5.5, -5], label: 'Async ML risk', symptom: 'hot:api', proactive: 2, relieves: 'api' },
+    { id: 'risk', icon: '🕵️', name: 'Fast risk', cost: 200, desc: 'Light model inline, heavy async', model: 'shield', color: '#ffcf8a', pos: [-5.5, -5], label: 'Fast risk model', symptom: 'hot:api', proactive: 2, relieves: 'api' },
     { id: 'warehouse', icon: '🏬', name: 'Warehouse', cost: 220, desc: 'Statements off the primary', model: 'stack', color: '#c5e8ff', pos: [12, -6.5], label: 'Warehouse', symptom: 'type:statement', relieves: 'read' },
     { id: 'replica', icon: '📚', name: 'Read replica', cost: 220, max: 2, desc: 'More capacity for reads', model: 'cyl', color: '#ffe6c2', slots: [[15.6, -3.2], [15.6, 3.2]], label: 'Replica', scales: 'read' },
     { id: 'chain', icon: '⛓️', name: 'Blockchain', cost: 280, upkeep: 2, trap: true, desc: 'Ledger on-chain · $2/s', model: 'cluster', pos: [5.5, -6.5], ghost: 4.6, label: 'Blockchain ledger' },

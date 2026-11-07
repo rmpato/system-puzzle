@@ -35,7 +35,7 @@ export const CARDS = {
     o('Idempotency key per post', true, 'Retry returns the same post.'),
     o('Disable the button', false, 'Network retries still duplicate.'),
     o('Dedupe by identical text', false, 'Users repeat posts on purpose.')] },
-  race: { icon: '🏁', title: 'Like count went down', text: 'Two likes, read then write.', fix: 'counter', opts: [
+  race: { icon: '🏁', title: 'Likes are getting lost', text: 'Two likes, read then write.', fix: 'counter', opts: [
     o('Atomic INCR, flush in batches', true, 'No lost updates, few DB writes.'),
     o('SELECT count, then UPDATE', false, 'Both read 41. Both write 42.'),
     o('COUNT(*) likes on every view', false, 'Scans millions of rows.')] },
@@ -73,7 +73,7 @@ export const CARDS = {
     o('Graph DB, ML ranking, services', false, 'Upkeep before users.'),
     o('Skip idempotency and the queue', false, 'Duplicates and lost alerts.')] },
   reverse: { icon: '↩️', title: 'Hardest to reverse?', text: 'Of everything you chose today.', opts: [
-    o('Post IDs and the fan-out model', true, 'Timelines and cursors depend on them.'),
+    o('Post ID format (time-sortable)', true, 'Cursors, timelines and URLs embed it.'),
     o('The cache library', false, 'Swappable behind an interface.'),
     o('The CDN vendor', false, 'Mostly configuration.')] },
 };
@@ -82,7 +82,7 @@ export const CARDS = {
 export const PUZZLES = {
   flow: {
     kind: 'order', icon: '🧭', title: 'Publish a post', text: 'Tap the steps in order.',
-    items: ['Client sends post + idempotency key', 'Store post in Postgres', 'Enqueue fan-out job', 'Push post ID to follower timelines', 'Notify followers'],
+    items: ['Client sends post + idempotency key', 'Store post in Postgres', 'Enqueue fan-out job', 'Push post ID to follower timelines', 'Follower reads it from their timeline'],
     signal: 'Walked the post flow end to end', flag: 'Shaky on the post publish flow',
   },
   contract: {

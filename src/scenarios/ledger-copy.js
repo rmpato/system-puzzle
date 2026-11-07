@@ -18,7 +18,7 @@ export const CARDS = {
   start: { icon: '🏗️', title: 'Where does the ledger live?', text: 'Small team. Money must add up.', opts: [
     o('Postgres, ACID, one modular service', true, 'Transactions and constraints for free.'),
     o('A blockchain, for trust', false, 'Slow, costly, you are the only party.'),
-    o('NoSQL per currency, scale later', false, 'No multi-row transactions on day one.')] },
+    o('NoSQL per currency, scale later', false, 'Weak cross-row transactions, no constraints.')] },
   statements: { icon: '📄', title: 'Statements hit the primary', text: 'Big scans next to live payments.', fix: 'warehouse', opts: [
     o('Run reports on a warehouse/replica', true, 'Keep the primary for writes.'),
     o('Run them at night on the primary', false, 'Users want them now; still contends.'),
@@ -28,7 +28,7 @@ export const CARDS = {
     o('Tell clients never to retry', false, 'Networks retry for you.'),
     o('Dedupe by amount + user + minute', false, 'Blocks real repeat payments.')] },
   race: { icon: '🏁', title: 'Account overdrawn', text: 'Two $80 withdrawals, $100 balance.', fix: 'lock', opts: [
-    o('SELECT … FOR UPDATE, then debit', true, 'Second waits, sees $20, rejects.'),
+    o('Row lock or UPDATE … WHERE balance ≥ 80', true, 'Second debit sees $20 and is rejected.'),
     o('Read balance, check, then write', false, 'Both read $100. Both pass.'),
     o('Check a cached balance first', false, 'Stale and still racy.')] },
   timeout: { icon: '⏳', title: 'Bank call timed out', text: 'Did the money move?', fix: 'recon', opts: [
@@ -44,9 +44,9 @@ export const CARDS = {
     o('Send webhooks synchronously', false, 'Checkout as slow as merchants.'),
     o('Drop events under load', false, 'Merchants miss paid orders.')] },
   fraud: { icon: '🕵️', title: 'Payments timing out', text: 'ML fraud model runs inline.', fix: 'risk', opts: [
-    o('Fast rules sync, ML scoring async', true, 'Block obvious fraud, review the rest.'),
+    o('Fast model inline with a timeout; heavy ML async', true, 'Decide before auth; deep review later.'),
     o('Skip fraud checks at peak', false, 'Fraudsters love peak.'),
-    o('Bigger servers for the model', false, 'Still blocks the critical path.')] },
+    o('Bigger servers for the model', false, 'Slow model still gates every payment.')] },
   dbload: { icon: '🔥', title: 'Ledger DB at 100%', text: 'Mostly reads and statements.', fix: 'warehouse', opts: [
     o('Reports to warehouse, reads to replica', true, 'Primary keeps money writes.'),
     o('Shard by currency now', false, 'Cross-currency txns get hard.'),
@@ -90,7 +90,7 @@ export const CARDS = {
 export const PUZZLES = {
   flow: {
     kind: 'order', icon: '🧭', title: 'Card payment flow', text: 'Tap the steps in order.',
-    items: ['Receive request + idempotency key', 'Validate + sync risk rules', 'Write ledger entries in one txn', 'Call the bank', 'Mark settled', 'Webhook via outbox'],
+    items: ['Receive request + idempotency key', 'Validate + sync risk rules', 'Record payment as pending', 'Call the bank with the same key', 'Post entries + outbox row in one txn', 'Relay webhook to the merchant'],
     signal: 'Walked a payment end to end', flag: 'Shaky on the payment flow',
   },
   entry: {

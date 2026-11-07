@@ -124,6 +124,6 @@ export default {
     { q: 'How do you keep offensive suggestions out?', when: { wrong: ['offensive'] } },
     { q: 'Walk me through rebuilding the trie from logs.', when: { wrong: ['pipeline'] } },
     { q: 'When does the trie stop fitting on one box? How do you split it?', when: { traps: true, counter: ['scaleFirst', 2] } },
-    { q: 'Estimate QPS: 100M users, 10 searches a day, 8 keystrokes each.', when: { always: true } },
+    { q: 'Estimate QPS: 1B users, 10 searches a day, 8 keystrokes each.', when: { always: true } },
   ],
 };

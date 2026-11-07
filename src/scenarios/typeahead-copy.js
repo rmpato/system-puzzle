@@ -42,7 +42,7 @@ export const CARDS = {
   slowlog: { icon: '🐢', title: 'Searches are slow', text: 'They wait for the log write.', fix: 'queue', opts: [
     o('Log async, off the request path', true, 'Users never wait on analytics.'),
     o('Bigger log database', false, 'Still on the hot path.'),
-    o('Sample 1% of logs', false, 'Rare terms vanish from counts.')] },
+    o('Sample 1% of logs, still sync', false, 'Loses data; sampled searches still wait.')] },
   offensive: { icon: '🙊', title: 'Offensive suggestion spotted', text: 'Screenshots are spreading.', opts: [
     o('Blocklist at build + live kill switch', true, 'Clean trie, instant removal.'),
     o('Retrain the ranking model', false, 'Takes days. It\'s live now.'),
@@ -65,7 +65,7 @@ export const CARDS = {
     o('Rebuild on every search', false, 'Rebuild cost × billions.'),
     o('Monthly is enough', false, 'Misses everything new.')] },
   personal: { icon: '👤', title: 'Personalize from day one?', text: 'PM wants "for you" suggestions.', opts: [
-    o('Global first, re-rank per user later', true, 'Needs logs and caching works.'),
+    o('Global first, re-rank per user later', true, 'Global answers cache; personalize once logs exist.'),
     o('Per-user trie for everyone', false, 'Memory ×users, no edge cache.'),
     o('ML ranker on every keystroke', false, 'Blows the 100 ms budget.')] },
   final: { icon: '🎯', title: 'Ship v1 next week, 2 devs', text: 'What do you keep?', opts: [
@@ -82,7 +82,7 @@ export const CARDS = {
 export const PUZZLES = {
   pipeline: {
     kind: 'order', icon: '🏭', title: 'Build the suggestions', text: 'Tap the offline steps in order.',
-    items: ['Collect query logs', 'Aggregate counts per term', 'Compute top-k per prefix', 'Build trie snapshot', 'Swap it in atomically', 'Serve from memory'],
+    items: ['Collect query logs', 'Aggregate counts per term', 'Build trie, top-k at each node', 'Ship snapshot to suggest servers', 'Swap it in atomically', 'Serve from memory'],
     signal: 'Walked the offline trie pipeline', flag: 'Shaky on how suggestions get built',
   },
   fields: {
