@@ -36,8 +36,8 @@ export default {
     { id: 'quota', icon: '🎟️', name: 'Maps quota', cost: 150, costStep: 0.4, max: 2, desc: '+5 ETA/s · pricey', model: 'stack', color: '#c9e7ff', slots: [[0, -9], [-3.8, -9]], label: 'Quota', scales: 'maps' },
     { id: 'idem', icon: '🔑', name: 'Idem. keys', cost: 150, desc: 'No double charges', model: 'key', color: '#ffd76a', pos: [-2.1, 11.1], label: 'Idempotency', symptom: 'hazard:duplicate', proactive: 1 },
     { id: 'recon', icon: '🔁', name: 'Reconciler', cost: 160, desc: 'Pending + reconcile timeouts', model: 'hourglass', color: '#d7f0c2', pos: [4.8, 6.8], label: 'Reconciler', symptom: 'hazard:timeout', proactive: 3 },
-    { id: 'queue', icon: '📬', name: 'Push queue', cost: 220, desc: 'Survives push outages', model: 'tube', color: '#dbe2ec', pos: [8.5, 11], label: 'Queue', symptom: 'outage', proactive: 2 },
     { id: 'cas', icon: '🔒', name: 'Atomic assign', cost: 140, desc: 'One driver, one trip', model: 'lock', color: '#cfd6e2', pos: [12, 3.8], label: 'Driver CAS', symptom: 'hazard:race', proactive: 2 },
+    { id: 'queue', icon: '📬', name: 'Push queue', cost: 220, desc: 'Survives push outages', model: 'tube', color: '#dbe2ec', pos: [8.5, 11], label: 'Queue', symptom: 'outage', proactive: 3 },
     { id: 'mesh', icon: '☸️', name: 'Service mesh', cost: 350, upkeep: 2, trap: true, desc: '+capacity · costs $2/s', model: 'wheel', pos: [-2, 0], ghost: 9.6, label: 'Mesh + K8s' },
     { id: 'ml', icon: '🤖', name: 'ML dispatch', cost: 300, upkeep: 2, trap: true, desc: 'Smarter matching · $2/s', model: 'gear', color: '#e3d0ff', pos: [-8, 6], label: 'ML dispatch' },
     { id: 'shard', icon: '🌍', name: 'Geo-shards', cost: 450, upkeep: 3, trap: true, trapUntil: 3, desc: 'Multi-region DB · $3/s', model: 'shards', color: '#ffc98a', pos: [12, -4.2], label: 'Geo-shards' },
@@ -61,7 +61,7 @@ export default {
   ],
 
   types: {
-    ping: { name: 'Location ping', color: '#2f6fed', steps: [{ pool: 'api', cost: 0.2 }, { pool: 'db', cost: 1, mods: { geo: 0 } }], hops: [{ node: 'geo', if: 'geo' }], firstText: 'Drivers pinging their location' },
+    ping: { name: 'Location ping', color: '#2f6fed', steps: [{ pool: 'api', cost: 0.1 }, { pool: 'db', cost: 1, mods: { geo: 0 } }], hops: [{ node: 'geo', if: 'geo' }], firstText: 'Drivers pinging their location' },
     match: { name: 'Nearby drivers', color: '#8b5cf6', steps: [{ pool: 'api', cost: 1 }, { pool: 'db', cost: 3, mods: { geo: 0 } }], hops: [{ node: 'geo', if: 'geo' }], cardOnFail: 'nearby', cardOnFailUnless: 'geo' },
     tile: { name: 'Map tile', color: '#e8930c', bypass: { item: 'cdn', node: 'cdn' }, steps: [{ pool: 'api', cost: 3 }], cardOnSeen: 'tiles', firstText: 'Map tiles started hitting the API' },
     eta: { name: 'ETA', color: '#0fb5b5', steps: [{ pool: 'api', cost: 1 }, { pool: 'maps', cost: 4, mods: { etacache: 0.25 }, via: [{ item: 'etacache', p: 0.75 }] }], cardOnFail: 'eta', cardOnFailUnless: 'etacache', firstText: 'Every screen now asks for an ETA' },
@@ -71,16 +71,16 @@ export default {
 
   phases: [
     { name: 'One city', dur: 30, rates: { ping: 4, match: 0.8, trip: 0.4 }, news: ['ping', 'trip'] },
-    { name: 'More drivers', dur: 50, rates: { ping: 14, match: 2, tile: 2, eta: 1.5, trip: 0.9 }, news: ['tile', 'eta', 'Drivers ×3'], hazards: { duplicate: 0.1 } },
-    { name: 'Friday night', dur: 55, rates: { ping: 28, match: 4.5, tile: 5, eta: 4, trip: 2 }, news: ['Riders ×3', 'Dispatch races'], hazards: { duplicate: 0.12, race: 9, outage: [18, 34] } },
-    { name: 'Concert + rain', dur: 60, rates: { ping: 55, match: 9, tile: 9, eta: 8, trip: 4.5 }, news: ['Surge ×10'], hazards: { duplicate: 0.18, timeout: 0.12, race: 6, spike: 8 } },
+    { name: 'More drivers', dur: 50, rates: { ping: 18, match: 2, tile: 2, eta: 1.5, trip: 0.9 }, news: ['tile', 'eta', 'Drivers ×3'], hazards: { duplicate: 0.1 } },
+    { name: 'Friday night', dur: 55, rates: { ping: 28, match: 4.5, tile: 5, eta: 4, trip: 2 }, news: ['Riders ×3', 'Dispatch races'], hazards: { duplicate: 0.12, race: 9 } },
+    { name: 'Concert + rain', dur: 60, rates: { ping: 55, match: 9, tile: 9, eta: 8, trip: 4.5 }, news: ['Surge ×10'], hazards: { duplicate: 0.18, timeout: 0.12, race: 6, spike: 8, outage: [24, 40] } },
   ],
 
   hazards: {
     duplicate: { type: 'trip', fix: 'idem', card: 'double', rep: 4, money: 12, text: '💸 charged twice', blocked: '🔑 duplicate ignored', at: 'psp', firstText: 'First double-charged rider', score: 10 },
     timeout: { type: 'trip', fix: 'recon', card: 'timeout', rep: 1, text: '⏳ fare lost', at: 'psp', firstText: 'Payment timeout lost a fare', score: 5 },
     race: { type: 'trip', fix: 'cas', card: 'race', rep: 5, money: 20, text: '🏁 driver double-booked', blocked: '🔒 driver taken', at: 'db', firstText: 'A driver got two trips', startText: 'Riders now compete for drivers', score: 15 },
-    outage: { node: 'push', label: 'Push service', card: 'notify', rep: 1.5, startText: 'Push service went down', lostText: '"Driver arriving" pushes were lost', event: { to: 'push', via: 'queue', type: 'push' }, score: 2 },
+    outage: { node: 'push', label: 'Push service', card: 'notify', rep: 2, startText: 'Push service went down', lostText: '"Driver arriving" pushes were lost', event: { to: 'push', via: 'queue', type: 'push' }, score: 2 },
     spike: { card: 'surge' },
     overload: { node: 'db', card: 'dbload', after: 3 },
   },

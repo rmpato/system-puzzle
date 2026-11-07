@@ -46,7 +46,7 @@ export const CARDS = {
     o('Queue pushes, retry when it recovers', true, 'Nothing lost, delivered late.'),
     o('Retry inline in the send path', false, 'Sends now fail with APNs.'),
     o('Build our own push protocol', false, 'Phones only wake for APNs/FCM.')] },
-  groups: { icon: '👥', title: 'Group messages are heavy', text: '1 send → 200 inbox writes.', fix: 'queue', opts: [
+  groups: { icon: '👥', title: 'Group messages are heavy', text: '1 send → 200 inbox writes.', opts: [
     o('Ack once, fan out async via a queue', true, 'Sender isn\'t blocked by members.'),
     o('Write all inboxes before acking', false, 'Latency grows with group size.'),
     o('Clients poll the group', false, 'Polling again, ×200.')] },

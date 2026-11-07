@@ -32,9 +32,9 @@ export default {
     { id: 'idgen', icon: '🔢', name: 'ID service', cost: 130, desc: 'Counter ranges, no collisions', model: 'counter', color: '#ffd76a', pos: [5.5, 6], label: 'ID ranges', symptom: 'hazard:duplicate', proactive: 1 },
     { id: 'unique', icon: '🔑', name: 'Unique index', cost: 90, desc: 'One owner per alias', model: 'key', color: '#cfd6e2', pos: [12, 4.2], label: 'Unique alias', symptom: 'hazard:race', proactive: 2 },
     { id: 'queue', icon: '📬', name: 'Click queue', cost: 180, desc: 'Async clicks, survives outages', model: 'tube', color: '#dbe2ec', pos: [7, 10.5], label: 'Click queue', symptom: ['outage', 'hazard:timeout'], proactive: 1 },
-    { id: 'micro', icon: '🧩', name: 'Microservices', cost: 250, upkeep: 4, trap: true, desc: '+capacity · costs $4/s', model: 'cluster', pos: [0, -5.6], ghost: 4.6, label: '6 services' },
-    { id: 'shard', icon: '🗂️', name: 'Sharding', cost: 400, upkeep: 5, trap: true, desc: '+DB capacity · costs $5/s', model: 'shards', color: '#ffc98a', pos: [12, -4.5], label: 'Shards' },
-    { id: 'region', icon: '🌍', name: 'Multi-region', cost: 350, upkeep: 4, trap: true, desc: '+capacity · costs $4/s', model: 'globe', pos: [-1.5, 6.5], label: 'Active-active' },
+    { id: 'micro', icon: '🧩', name: 'Microservices', cost: 180, upkeep: 2, trap: true, desc: '+capacity · costs $2/s', model: 'cluster', pos: [0, -5.6], ghost: 4.6, label: '6 services' },
+    { id: 'shard', icon: '🗂️', name: 'Sharding', cost: 320, upkeep: 3, trap: true, desc: '+DB capacity · costs $3/s', model: 'shards', color: '#ffc98a', pos: [12, -4.5], label: 'Shards' },
+    { id: 'region', icon: '🌍', name: 'Multi-region', cost: 280, upkeep: 3, trap: true, desc: '+capacity · costs $3/s', model: 'globe', pos: [-1.5, 6.5], label: 'Active-active' },
   ],
 
   wires: [

@@ -289,6 +289,12 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
       else spawnEvent(ev, ev.via, ev.to, 0.6);
       return;
     }
+    if (S.outage && HZ.outage?.node === r.to && ev.via && has(ev.via)) {
+      // already in flight when the outage began: the queue keeps it for redelivery
+      emit('resolve', { r, ok: true });
+      S.queued++;
+      return;
+    }
     if (S.outage && HZ.outage?.node === r.to) {
       S.counts.lost++;
       S.rep -= HZ.outage.rep ?? 1.5;
