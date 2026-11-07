@@ -30,7 +30,7 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     served: 0, failed: 0, revenue: 0,
     tok: {}, demand: {}, load: {}, nodeLoad: {}, hotT: 0, meterT: 0,
     accum: {}, seen: {}, signals: [], flags: [],
-    pendingDup: 0, outage: false, queued: 0, raceTimer: 4, raceTaken: {},
+    pendingDup: 0, surging: false, outage: false, queued: 0, raceTimer: 4, raceTaken: {},
     counts: { duplicate: 0, race: 0, timeout: 0, lost: 0, scaleFirst: 0, earlyTraps: 0 },
     firsts: {}, timeline: [], answers: {}, judge: { pts: 0, max: 0 },
     queue: [], scheduled: [], breakQueue: [], breakTotal: 0, ending: false, outageEnd: false,
@@ -218,7 +218,12 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     const D = TYPES[r.type];
     first(`type:${r.type}`, D.firstText);
     if (D.cardOnSeen) trigger(D.cardOnSeen, 2.5);
-    if (D.bypass && r.to === D.bypass.node) { S.served++; emit('resolve', { r, ok: true }); return; }
+    if (D.bypass && r.to === D.bypass.node) {
+      S.served++;
+      emit('resolve', { r, ok: true });
+      if (D.value && D.bypass.value !== false) { S.money += D.value; S.revenue += D.value; emit('cash', { value: D.value, at: D.bypass.node }); }
+      return;
+    }
 
     const costs = D.steps.map((st) => {
       let c = st.cost;
@@ -315,8 +320,18 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     S.money -= upkeep() * dt;
     S.rep = Math.min(100, S.rep + T.repRegen * dt);
 
+    // optional traffic surge: { at, dur, mult, label, types? } multiplies rates for a window of the phase
+    const sg = P.surge;
+    const surging = !!sg && S.phaseTime >= sg.at && S.phaseTime < sg.at + sg.dur;
+    if (surging !== S.surging) {
+      S.surging = surging;
+      emit('surge', { on: surging, label: sg?.label, mult: sg?.mult });
+      if (surging) log('event', `Traffic surge ×${sg.mult}${sg.label ? `: ${sg.label}` : ''}`, 'info');
+      if (surging && sg.card) trigger(sg.card, 0.5);
+    }
     for (const [type, rate] of Object.entries(P.rates)) {
-      S.accum[type] = (S.accum[type] || 0) + rate * dt * (0.6 + random() * 0.8);
+      const k = surging && (!sg.types || sg.types.includes(type)) ? sg.mult : 1;
+      S.accum[type] = (S.accum[type] || 0) + rate * k * dt * (0.6 + random() * 0.8);
       while (S.accum[type] >= 1) {
         S.accum[type] -= 1;
         const extra = {};

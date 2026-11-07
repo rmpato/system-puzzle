@@ -104,6 +104,9 @@ export default {
   //   outage: [a,b]   node down from a to b seconds into the phase; events to it are lost unless via `event.via`
   //   spike: seconds  shows hazards.spike.card at that time
   //   overload        (global) hazards.overload.card when its node stays >105% for `after` seconds
+  // Optional per phase: surge: { at: 20, dur: 12, mult: 3, label: 'Concert ends', types?: ['trip'], card?: 'surge' }
+  //   multiplies the rates (of `types`, or all) for `dur` seconds starting `at` seconds into the phase; shows a banner.
+  // Bypass requests with a `value` earn money at the bypass node (set bypass.value: false to disable).
   hazards: {
     duplicate: { type: 'checkout', fix: 'idem', card: 'double', rep: 4, money: 10, text: '💸 charged twice', blocked: '🔑 duplicate ignored', at: 'psp', firstText: '…', score: 10 },
     timeout:   { type: 'checkout', fix: 'queue', card: 'timeout', rep: 1, text: '⏳ sale lost', at: 'psp', firstText: '…', score: 5 },

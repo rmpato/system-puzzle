@@ -389,6 +389,7 @@ function hookSim() {
       case 'meter': renderLabels(); renderHud(); renderShop(); break;
       case 'incident': case 'break': showCurrent(); break;
       case 'phase': phaseBanner(); break;
+      case 'surge': if (p.on) surgeBanner(p); renderHud(); break;
       case 'phaseEnd': snapshot(sc.phases[p.phase].name); break;
       case 'end': showResults(); break;
     }
@@ -552,7 +553,7 @@ function renderHud() {
   const P = sc.phases[S.phase];
   const r = Math.round(S.moneyRate);
   hud.innerHTML = `
-    <div class="note stat" id="phase"><small>${sc.icon} ${sc.title} · ${S.phase + 1}/${sc.phases.length}</small><b>${P.name}</b><div class="bar"><i style="width:${Math.min(100, (S.phaseTime / P.dur) * 100)}%"></i></div></div>
+    <div class="note stat" id="phase"><small>${sc.icon} ${sc.title} · ${S.phase + 1}/${sc.phases.length}</small><b>${P.name}${S.surging ? ' <span class="surge">📈 surge</span>' : ''}</b><div class="bar"><i style="width:${Math.min(100, (S.phaseTime / P.dur) * 100)}%"></i></div></div>
     <div class="note stat"><small>Budget</small><b style="color:${S.money < 0 ? 'var(--bad)' : 'var(--ink)'}">$${Math.floor(S.money)}</b>${r ? `<span class="rate ${r > 0 ? 'up' : 'down'}">${r > 0 ? '+' : ''}${r}/s</span>` : ''}</div>
     <div class="note stat ${S.rep < 35 ? 'low' : ''}" id="rep"><small>Reputation</small><b>${Math.round(S.rep)}</b><div class="bar"><i style="width:${Math.max(0, S.rep)}%"></i></div></div>
     <div class="spacer"></div>
@@ -654,6 +655,17 @@ function phaseBanner() {
   renderHud();
   renderShop();
   syncGhosts();
+}
+
+function surgeBanner(p) {
+  const b = $('banner');
+  b.querySelector('b').textContent = `📈 Surge ×${p.mult}`;
+  b.querySelector('.news').innerHTML = p.label ? `<span>${p.label}</span>` : '';
+  b.classList.add('show');
+  sfx('alert');
+  shake = 0.3;
+  clearTimeout(bannerT);
+  bannerT = setTimeout(() => b.classList.remove('show'), 2000);
 }
 
 // ═════════════════════════════════════════════ modals

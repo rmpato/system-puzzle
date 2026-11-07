@@ -114,6 +114,7 @@ for (const sc of list) {
     total += P.dur;
     for (const t of Object.keys(P.rates || {})) if (!sc.types[t]) e(`phase ${i}: rate for unknown type "${t}"`);
     for (const k of Object.keys(P.hazards || {})) { if (!HAZARDS.includes(k)) e(`phase ${i}: unknown hazard "${k}"`); else if (!HZ[k]) e(`phase ${i}: uses hazard "${k}" but hazards.${k} is not defined`); }
+    if (P.surge) { const g = P.surge; if (!(g.mult > 1) || !(g.dur > 0) || g.at === undefined) e(`phase ${i}: surge needs at, dur > 0, mult > 1`); if (g.at + g.dur > P.dur) w(`phase ${i}: surge runs past the end of the phase`); for (const t of g.types || []) if (!sc.types[t]) e(`phase ${i}: surge type "${t}" unknown`); if (g.card && !cards[g.card]) e(`phase ${i}: surge card "${g.card}" unknown`); }
     for (const n of P.news || []) if (!sc.types[n] && n.length > 22) w(`phase ${i}: news "${n}" is long`);
   });
   if ((sc.phases || []).length < 3) w('fewer than 3 phases');
