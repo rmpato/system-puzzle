@@ -1,36 +1,5 @@
-// Everything the game says, taken from the "Backend Engineer System Design Interview" guide.
+// Marketplace Rush copy, taken from the "Backend Engineer · System Design Interview" guide.
 // Keep copy short: the game should be playable without reading.
-
-export const TYPES = {
-  browse:   { name: 'Browse',   color: '#2f6fed', api: 1, db: 1, read: true },
-  image:    { name: 'Image',    color: '#e8930c', api: 3, db: 0 },
-  search:   { name: 'Search',   color: '#8b5cf6', api: 4, db: 2, read: true },
-  checkout: { name: 'Checkout', color: '#1f9d55', api: 2, db: 2 },
-};
-export const NOTIF_COLOR = '#e8559a';
-export const FAIL_COLOR = '#e5484d';
-
-export const SHOP = [
-  { id: 'instance', icon: '🖥️', name: 'API server', cost: 110, max: 8, desc: '+8 req/s · +10 DB connections' },
-  { id: 'cache', icon: '🧺', name: 'Redis', cost: 160, desc: 'Persistent cart · cheaper browsing' },
-  { id: 'replica', icon: '📚', name: 'Read replica', cost: 220, max: 2, desc: 'More DB capacity for reads' },
-  { id: 'pgbouncer', icon: '🔌', name: 'PgBouncer', cost: 140, desc: 'Pools DB connections' },
-  { id: 'cdn', icon: '🌐', name: 'CDN', cost: 160, desc: 'Images skip the API' },
-  { id: 'search', icon: '🔍', name: 'Search index', cost: 220, desc: 'Cheap search' },
-  { id: 'idem', icon: '🔑', name: 'Idem. keys', cost: 130, desc: 'No double charges' },
-  { id: 'queue', icon: '📬', name: 'Queue', cost: 200, desc: 'Survives outages & timeouts' },
-  { id: 'lock', icon: '🔒', name: 'Stock lock', cost: 120, desc: 'No overselling' },
-  { id: 'k8s', icon: '☸️', name: 'Kubernetes', cost: 350, upkeep: 2, trap: true, desc: '+capacity · costs $2/s' },
-  { id: 'micro', icon: '🧩', name: 'Microservices', cost: 300, upkeep: 2, trap: true, desc: '+capacity · costs $2/s' },
-  { id: 'shard', icon: '🗂️', name: 'Sharding', cost: 450, upkeep: 3, trap: true, desc: '+DB capacity · costs $3/s' },
-];
-
-export const PHASES = [
-  { name: 'MVP launch', dur: 30, rates: { browse: 2, checkout: 0.4 }, news: ['browse', 'checkout'] },
-  { name: 'Growth', dur: 50, rates: { browse: 4, image: 2, search: 1.5, checkout: 0.8 }, dupes: 0.1, news: ['image', 'search'] },
-  { name: 'Scale', dur: 55, rates: { browse: 9, image: 5, search: 4, checkout: 2 }, dupes: 0.12, outage: [18, 34], news: ['×3'] },
-  { name: 'Black Friday', dur: 60, rates: { browse: 18, image: 9, search: 7, checkout: 4.5 }, dupes: 0.18, timeouts: 0.12, drops: true, spike: 8, news: ['×10'] },
-];
 
 export const QUESTIONS = [
   { q: 'How many concurrent users?', a: 'Small now. Black Friday ≈ 10×.', good: true },
@@ -176,21 +145,3 @@ export const BREAKS = {
 };
 export const FINALS = ['final', 'reverse'];
 
-// Follow-up questions from the interview guide, suggested to the interviewer by weak spot.
-export const FOLLOWUPS = {
-  idem: 'If the payment event is delivered twice, how do you guarantee a single charge?',
-  queue: 'If the notification service is down, is the notification lost? How do you mitigate it?',
-  pgbouncer: '60 instances with a pool of 10 each and a DB that accepts 500: what happens?',
-  cdn: 'If the backend serves product images, what problem appears when scaling?',
-  search: '/products/search runs full-text over the whole catalog. What would you do?',
-  lock: 'Two users buy the last item at the same time. How do you prevent it?',
-  timeout: 'The payment provider times out. How do you know if the payment went through?',
-  routing: 'Which queries would you send to a read replica, and which never?',
-  contract: 'Define the checkout endpoint contract: what does it receive and return?',
-  flutter: 'How do you handle a contract change when the client is a typed mobile app?',
-  domains: 'Which domain boundaries do you see, and how would you split the monolith later?',
-  cart: 'How would you model the cart? A table? Redis? Why?',
-  flow: 'Walk me through a purchase end to end: the happy path.',
-  scale: 'Black Friday traffic spikes 10×. What breaks first, and what do you do?',
-  reverse: 'Which architecture decision would be the most expensive to reverse?',
-};

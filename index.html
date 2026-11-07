@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Marketplace Rush</title>
+<title>System Puzzle</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&family=Kalam:wght@400;700&display=swap" rel="stylesheet" />
@@ -201,6 +201,28 @@
   .timeline li em { font-style: normal; color: var(--muted); flex: none; width: 92px; }
   .timeline li.good { background: var(--good-bg); }
   .timeline li.bad { background: var(--bad-bg); }
+
+  /* scenario picker */
+  .picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; margin: 14px 0 6px; text-align: left; }
+  .scn { display: flex; gap: 12px; align-items: flex-start; padding: 14px; background: var(--card); border: 2px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow); text-align: left; transition: transform .1s, box-shadow .1s; }
+  .scn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--ink); }
+  .scn-ic { font-size: 34px; line-height: 1; flex: none; }
+  .scn-body { flex: 1; min-width: 0; display: grid; gap: 3px; }
+  .scn-body b { font: 800 18px/1.1 var(--font-display); }
+  .scn-body > span { color: var(--muted); font-size: 13px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .tags i { font-style: normal; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--blue-bg); color: var(--blue); }
+  .scn-meta { display: grid; gap: 6px; justify-items: end; flex: none; }
+  .diff { font-style: normal; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 6px; border: 1.5px solid currentColor; }
+  .diff.easy { color: var(--good); } .diff.medium { color: var(--blue); } .diff.hard { color: var(--warn); } .diff.expert { color: var(--bad); }
+  .grade-sm { font: 800 22px/1 var(--font-display); }
+  .grade-sm.S, .grade-sm.A { color: var(--good); } .grade-sm.B { color: var(--blue); } .grade-sm.C { color: var(--warn); } .grade-sm.D, .grade-sm.F { color: var(--bad); }
+  .item .k { position: absolute; top: 3px; left: 6px; font: 600 10px var(--font-mono); color: var(--muted); }
+  /* architecture timelapse */
+  .evo { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 6px 0 16px; }
+  .evo figure { margin: 0; }
+  .evo img { width: 100%; max-width: 100%; display: block; border: 1.5px solid var(--ink); border-radius: 8px; }
+  .evo figcaption { font: 700 14px var(--font-hand); text-align: center; margin-top: 3px; }
 
   @media (max-width: 760px) {
     .legend.top, #phase .bar { display: none; }
