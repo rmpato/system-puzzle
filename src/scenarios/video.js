@@ -74,7 +74,7 @@ export default {
     { name: 'Launch', dur: 30, rates: { feed: 2, watch: 0.6, view: 0.8, upload: 0.15 }, news: ['feed', 'watch', 'view', 'upload'] },
     { name: 'Creators', dur: 50, rates: { feed: 4, watch: 2.5, view: 3, upload: 0.6, search: 1.2 }, news: ['search', 'More creators'], hazards: { duplicate: 0.1, timeout: 0.15 } },
     { name: 'Growth', dur: 55, rates: { feed: 8, watch: 6, view: 6, upload: 1.1, search: 3 }, news: ['Traffic ×3'], hazards: { duplicate: 0.12, timeout: 0.15, outage: [18, 34] } },
-    { name: 'Viral hit', dur: 60, rates: { feed: 14, watch: 12, view: 15, upload: 1.8, search: 5.5 }, news: ['One video ×100'], hazards: { duplicate: 0.15, timeout: 0.15, spike: 8 } },
+    { name: 'Viral hit', dur: 60, surge: { at: 20, dur: 10, mult: 1.7, label: 'Video trends worldwide', types: ['watch', 'view', 'feed'] }, rates: { feed: 14, watch: 12, view: 15, upload: 1.8, search: 5.5 }, news: ['One video ×100'], hazards: { duplicate: 0.15, timeout: 0.15, spike: 8 } },
   ],
 
   hazards: {

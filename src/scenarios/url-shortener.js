@@ -68,7 +68,7 @@ export default {
     { name: 'Launch', dur: 30, rates: { redirect: 3, click: 0.5, create: 0.5 }, news: ['redirect', 'click', 'create'] },
     { name: 'Growth', dur: 50, rates: { redirect: 7, click: 1.2, create: 0.8, spam: 1.5 }, news: ['spam', 'Traffic ×2'], hazards: { duplicate: 0.12, outage: [24, 40] } },
     { name: 'Scale', dur: 55, rates: { redirect: 12, click: 2, create: 1.2, spam: 3, viral: 4 }, news: ['viral', 'Custom aliases'], hazards: { duplicate: 0.12, timeout: 0.08, race: 8 } },
-    { name: 'Gone viral', dur: 60, rates: { redirect: 18, click: 3, create: 1.6, spam: 4, viral: 12 }, news: ['Traffic ×5'], hazards: { duplicate: 0.15, timeout: 0.1, race: 6, spike: 8 } },
+    { name: 'Gone viral', dur: 60, surge: { at: 22, dur: 10, mult: 1.8, label: 'Link hits the front page', types: ['viral', 'redirect'] }, rates: { redirect: 18, click: 3, create: 1.6, spam: 4, viral: 12 }, news: ['Traffic ×5'], hazards: { duplicate: 0.15, timeout: 0.1, race: 6, spike: 8 } },
   ],
 
   hazards: {

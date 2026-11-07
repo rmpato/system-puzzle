@@ -71,7 +71,7 @@ export default {
   phases: [
     { name: 'Presale', dur: 30, rates: { browse: 2, buy: 0.4 }, news: ['browse', 'buy'] },
     { name: 'Tour announced', dur: 45, rates: { browse: 5, assets: 3, bot: 1.5, buy: 0.8 }, news: ['assets', 'bot'], hazards: { duplicate: 0.12 } },
-    { name: 'On-sale 10:00', dur: 60, rates: { browse: 9, assets: 5, bot: 4, rush: 7, buy: 2.2 }, news: ['rush', 'Traffic ×10'], hazards: { duplicate: 0.15, race: 7, timeout: 0.1, spike: 2, outage: [24, 42] } },
+    { name: 'On-sale 10:00', dur: 60, surge: { at: 4, dur: 8, mult: 1.45, label: '10:00: everyone clicks Buy', types: ['rush', 'bot', 'browse'] }, rates: { browse: 9, assets: 5, bot: 4, rush: 7, buy: 2.2 }, news: ['rush', 'Traffic ×10'], hazards: { duplicate: 0.15, race: 7, timeout: 0.1, spike: 2, outage: [24, 42] } },
     { name: 'Sold-out frenzy', dur: 55, rates: { browse: 15, assets: 8, bot: 7, rush: 11, buy: 3.6 }, news: ['Bots ×2', 'Last seats'], hazards: { duplicate: 0.18, race: 3.5, timeout: 0.15 } },
   ],
 

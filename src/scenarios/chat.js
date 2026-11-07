@@ -70,7 +70,7 @@ export default {
     { name: 'Beta', dur: 30, rates: { sync: 3, send: 1, history: 0.6 }, news: ['sync', 'send', 'history'] },
     { name: 'Growth', dur: 55, rates: { sync: 5, send: 2.5, history: 2, presence: 4, media: 1.5 }, news: ['presence', 'media', 'Traffic ×3'], hazards: { duplicate: 0.15 } },
     { name: 'Group chats', dur: 60, rates: { sync: 9, send: 5, group: 2, history: 5, presence: 10, media: 4 }, news: ['group', 'Traffic ×2'], hazards: { duplicate: 0.12, race: 8, timeout: 0.06, outage: [20, 36] } },
-    { name: 'New Year\'s Eve', dur: 60, rates: { sync: 14, send: 10, group: 4, history: 9, presence: 18, media: 8 }, news: ['Midnight peak ×2'], hazards: { duplicate: 0.18, race: 6, timeout: 0.12, spike: 8 } },
+    { name: 'New Year\'s Eve', dur: 60, surge: { at: 30, dur: 8, mult: 1.8, label: 'Midnight: Happy New Year!', types: ['send', 'group', 'sync', 'presence'] }, rates: { sync: 14, send: 10, group: 4, history: 9, presence: 18, media: 8 }, news: ['Midnight peak ×2'], hazards: { duplicate: 0.18, race: 6, timeout: 0.12, spike: 8 } },
   ],
 
   hazards: {

@@ -71,7 +71,7 @@ export default {
     { name: 'MVP launch', dur: 30, rates: { browse: 2, checkout: 0.4 }, news: ['browse', 'checkout'] },
     { name: 'Growth', dur: 50, rates: { browse: 4, image: 2, search: 1.5, checkout: 0.8 }, news: ['image', 'search'], hazards: { duplicate: 0.1 } },
     { name: 'Scale', dur: 55, rates: { browse: 9, image: 5, search: 4, checkout: 2 }, news: ['Traffic ×3'], hazards: { duplicate: 0.12, outage: [18, 34] } },
-    { name: 'Black Friday', dur: 60, rates: { browse: 18, image: 9, search: 7, checkout: 4.5 }, news: ['Traffic ×10'], hazards: { duplicate: 0.18, timeout: 0.12, race: 7, spike: 8 } },
+    { name: 'Black Friday', dur: 60, surge: { at: 30, dur: 8, mult: 1.6, label: 'Doorbuster deals go live' }, rates: { browse: 18, image: 9, search: 7, checkout: 4.5 }, news: ['Traffic ×10'], hazards: { duplicate: 0.18, timeout: 0.12, race: 7, spike: 8 } },
   ],
 
   hazards: {
