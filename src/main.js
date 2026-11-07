@@ -17,6 +17,10 @@ const store = {
 
 // ═════════════════════════════════════════════ sound
 let ac = null, muted = store.get('sp-muted', false);
+let mode = store.get('sp-mode', 'practice'); // practice: answers explained · interview: answers hidden until the debrief
+const interview = () => mode === 'interview';
+let speed = 1;
+const review = []; // every answer, for the debrief
 const lastSfx = {};
 function tone(freq, dur = 0.08, type = 'sine', vol = 0.05, delay = 0) {
   if (!ac || muted) return;
@@ -277,7 +281,7 @@ function syncGhosts() {
     hit.userData.buy = s.id;
     g.add(sq, hit);
     g.position.copy(slotFor(s.id, sim.count(s.id)).setY(0));
-    const div = label(g, `<span>${s.icon}</span>$${sim.price(s.id)}`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (S.hint[s.id] ? ' hint' : ''));
+    const div = label(g, `<span>${s.icon}</span>$${sim.price(s.id)}`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (S.hint[s.id] && !interview() ? ' hint' : ''));
     W.ghosts.add(g);
     ghosts[s.id] = { g, div, hit };
   }
@@ -461,7 +465,7 @@ function frame(now) {
   last = now;
   const t = now / 1000;
   const running = sim ? sim.live() : false;
-  if (running) sim.step(dt);
+  if (running) sim.step(dt * speed);
 
   if (sim) for (const o of live.values()) place(o.m, o.c.getPoint(Math.max(0, Math.min(1, (S.time - o.r.t) / o.r.dur))));
   for (let i = fx.length - 1; i >= 0; i--) {
@@ -551,6 +555,7 @@ function renderHud() {
     <div class="note stat ${S.rep < 35 ? 'low' : ''}" id="rep"><small>Reputation</small><b>${Math.round(S.rep)}</b><div class="bar"><i style="width:${Math.max(0, S.rep)}%"></i></div></div>
     <div class="spacer"></div>
     <div class="note legend top">${legendHtml}</div>
+    <button class="note iconbtn" id="speedBtn" aria-label="Speed" title="Speed">${speed === 1 ? '1×' : '2×'}</button>
     <button class="note iconbtn" id="pauseBtn" aria-label="${S.userPaused ? 'Resume' : 'Pause'}">${S.userPaused ? '▶' : '⏸'}</button>
     <button class="note iconbtn" id="muteBtn" aria-label="${muted ? 'Unmute' : 'Mute'}">${muted ? '🔇' : '🔊'}</button>
   `;
@@ -558,6 +563,7 @@ function renderHud() {
 $('hud').addEventListener('click', (e) => {
   if (e.target.closest('#pauseBtn')) togglePause();
   if (e.target.closest('#muteBtn')) toggleMute();
+  if (e.target.closest('#speedBtn')) { speed = speed === 1 ? 2 : 1; renderHud(); }
 });
 function toggleMute() { muted = !muted; store.set('sp-muted', muted); renderHud(); }
 function togglePause() {
@@ -583,7 +589,7 @@ function renderShop() {
   shop.innerHTML = sc.shop.map((s, i) => {
     const n = sim.count(s.id), max = s.max || 1, price = sim.price(s.id);
     const done = n >= max, poor = !done && S.money < price;
-    return `<button class="item ${s.trap ? 'trap' : ''} ${done ? 'done' : ''} ${poor ? 'poor' : ''} ${S.hint[s.id] && !done ? 'hint' : ''}" data-id="${s.id}" ${done || poor ? 'disabled' : ''} aria-label="${s.name}, $${price}">
+    return `<button class="item ${s.trap ? 'trap' : ''} ${done ? 'done' : ''} ${poor ? 'poor' : ''} ${S.hint[s.id] && !done && !interview() ? 'hint' : ''}" data-id="${s.id}" ${done || poor ? 'disabled' : ''} aria-label="${s.name}, $${price}">
       ${i < 9 ? `<span class="k">${i + 1}</span>` : ''}<span class="ic">${s.icon}</span>${max > 1 && n ? `<span class="n">${n}</span>` : ''}
       <b>${s.name}</b>
       <span class="p">${done ? '✓' : `$${price}`}</span>
@@ -661,6 +667,7 @@ function bindCont() {
   b.addEventListener('click', () => { closeModal(); sim.next(); shopSig = ''; renderShop(); });
 }
 function eyebrow(cur) {
+  if (cur.incident && cur.id === sc.startCard) return '<div class="eyebrow">Interviewer asks</div>';
   if (cur.incident) return '<div class="eyebrow danger">Incident</div>';
   return `<div class="eyebrow">${cur.closing ? 'Closing questions' : 'Whiteboard'} · ${cur.step}/${cur.total}</div>`;
 }
@@ -684,6 +691,13 @@ function showCard(cur) {
   modal.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => {
     const i = +b.dataset.i;
     const res = sim.answerCard(cur.id, i);
+    review.push({ title: clean(c.title), chosen: clean(c.opts[i].t), best: clean(c.opts[res.best].t), why: clean(c.opts[res.best].why), good: res.good });
+    if (interview()) {
+      sfx('tick');
+      modal.querySelectorAll('.opt').forEach((x) => { x.disabled = true; if (+x.dataset.i === i) x.classList.add('on'); });
+      modal.querySelector('.card').insertAdjacentHTML('beforeend', cont(cur.closing && cur.step === cur.total ? 'Results' : 'Continue', '<span class="noted">✓ Noted</span>'));
+      return bindCont();
+    }
     sfx(res.good ? 'good' : 'bad');
     modal.querySelectorAll('.opt').forEach((x) => {
       x.disabled = true;
@@ -698,8 +712,16 @@ function showCard(cur) {
     bindCont();
   }));
 }
+// In interview mode the result is recorded but not revealed: render every item as neutral.
+const mask = (res) => (interview() ? { ...res, masked: true } : res);
 const puzzleHead = (cur) => `${eyebrow(cur)}<div class="big-ic">${cur.data.icon}</div><h2>${md(cur.data.title)}</h2><p class="sub">${md(cur.data.text)}</p>`;
-function puzzleDone(res) {
+function puzzleDone(res, cur) {
+  review.push({ title: clean(cur.data.title), chosen: `${res.correct}/${res.total} correct`, best: '', why: clean(cur.data.signal || ''), good: res.ratio === 1, puzzle: true });
+  if (interview()) {
+    sfx('tick');
+    modal.querySelector('.card').insertAdjacentHTML('beforeend', cont('Continue', '<span class="noted">✓ Noted</span>'));
+    return bindCont();
+  }
   sfx(res.ratio === 1 ? 'good' : res.ratio >= 0.6 ? 'tick' : 'bad');
   modal.querySelector('.card').insertAdjacentHTML('beforeend', cont('Continue', `<span class="delta ${res.ratio >= 0.6 ? 'up' : 'down'}">${res.correct}/${res.total}${res.reward ? ` · +$${res.reward}` : ''}</span>`));
   bindCont();
@@ -711,18 +733,18 @@ function showOrder(cur) {
   const draw = (res) => {
     openModal(`
       ${puzzleHead(cur)}
-      <div class="opts">${(res ? p.items.map((_, i) => i) : order).map((i) => {
+      <div class="opts">${(res && !res.masked ? p.items.map((_, i) => i) : order).map((i) => {
         const pos = seq.indexOf(i);
-        const cls = res ? (res.per[pos] ? 'right' : 'wrong') : pos >= 0 ? 'on' : '';
-        return `<button class="opt seq ${cls}" data-i="${i}" ${res || pos >= 0 ? 'disabled' : ''}><span class="num">${pos >= 0 ? pos + 1 : ''}</span>${md(p.items[i])}${res && !res.per[pos] ? `<small>You put it at step ${pos + 1}</small>` : ''}</button>`;
+        const cls = res?.masked ? 'on' : res ? (res.per[pos] ? 'right' : 'wrong') : pos >= 0 ? 'on' : '';
+        return `<button class="opt seq ${cls}" data-i="${i}" ${res || pos >= 0 ? 'disabled' : ''}><span class="num">${pos >= 0 ? pos + 1 : ''}</span>${md(p.items[i])}${res && !res.masked && !res.per[pos] ? `<small>You put it at step ${pos + 1}</small>` : ''}</button>`;
       }).join('')}</div>
       ${res ? '' : `<div class="row"><span class="grow"><button class="link" id="undo" ${seq.length ? '' : 'disabled'}>↶ Undo</button></span></div>`}
     `);
-    if (res) return puzzleDone(res);
+    if (res) return puzzleDone(res, cur);
     modal.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => {
       seq.push(+b.dataset.i);
       sfx('tick');
-      draw(seq.length === p.items.length ? sim.solvePuzzle(cur.id, seq) : undefined);
+      draw(seq.length === p.items.length ? mask(sim.solvePuzzle(cur.id, seq)) : undefined);
     }));
     $('undo').addEventListener('click', () => { seq.pop(); draw(); });
   };
@@ -738,19 +760,19 @@ function showPick(cur) {
       <div class="chips">${order.map((i) => {
         const it = p.items[i];
         const on = picked.has(i);
-        const cls = res ? (it.good ? (on ? 'right' : 'miss') : on ? 'wrong' : 'off') : on ? 'on' : '';
-        return `<button class="chip ${cls}" data-i="${i}" ${res || (!on && picked.size >= p.pick) ? 'disabled' : ''}><code>${it.t}</code>${res && it.why && on ? `<small>${md(it.why)}</small>` : ''}</button>`;
+        const cls = res?.masked ? (on ? 'on' : 'off') : res ? (it.good ? (on ? 'right' : 'miss') : on ? 'wrong' : 'off') : on ? 'on' : '';
+        return `<button class="chip ${cls}" data-i="${i}" ${res || (!on && picked.size >= p.pick) ? 'disabled' : ''}><code>${it.t}</code>${res && !res.masked && it.why && on ? `<small>${md(it.why)}</small>` : ''}</button>`;
       }).join('')}</div>
       ${res ? '' : `<div class="row"><span class="grow eyebrow">${picked.size}/${p.pick}</span><button class="btn" id="check" ${picked.size === p.pick ? '' : 'disabled'}>Check</button></div>`}
     `);
-    if (res) return puzzleDone(res);
+    if (res) return puzzleDone(res, cur);
     modal.querySelectorAll('.chip').forEach((b) => b.addEventListener('click', () => {
       const i = +b.dataset.i;
       picked.has(i) ? picked.delete(i) : picked.add(i);
       sfx('tick');
       draw();
     }));
-    $('check').addEventListener('click', () => draw(sim.solvePuzzle(cur.id, [...picked])));
+    $('check').addEventListener('click', () => draw(mask(sim.solvePuzzle(cur.id, [...picked]))));
   };
   draw();
 }
@@ -763,14 +785,14 @@ function showSort(cur) {
       ${puzzleHead(cur)}
       <div class="sort">${order.map((i) => {
         const it = p.items[i];
-        const cls = res ? (res.per[i] ? 'right' : 'wrong') : '';
-        return `<div class="sort-row ${cls}"><span class="sort-t">${md(it.t)}${res && !res.per[i] && it.why ? `<small>${md(it.why)}</small>` : ''}</span><span class="sort-b">${p.buckets.map((b, bi) => `<button class="bucket ${ans[i] === bi ? 'on' : ''} ${res && bi === it.a ? 'ans' : ''}" data-i="${i}" data-b="${bi}" ${res ? 'disabled' : ''}>${b}</button>`).join('')}</span></div>`;
+        const cls = res && !res.masked ? (res.per[i] ? 'right' : 'wrong') : '';
+        return `<div class="sort-row ${cls}"><span class="sort-t">${md(it.t)}${res && !res.masked && !res.per[i] && it.why ? `<small>${md(it.why)}</small>` : ''}</span><span class="sort-b">${p.buckets.map((b, bi) => `<button class="bucket ${ans[i] === bi ? 'on' : ''} ${res && !res.masked && bi === it.a ? 'ans' : ''}" data-i="${i}" data-b="${bi}" ${res ? 'disabled' : ''}>${b}</button>`).join('')}</span></div>`;
       }).join('')}</div>
       ${res ? '' : `<div class="row"><span class="grow"></span><button class="btn" id="check" ${ans.every((a) => a !== null) ? '' : 'disabled'}>Check</button></div>`}
     `, 'center wide');
-    if (res) return puzzleDone(res);
+    if (res) return puzzleDone(res, cur);
     modal.querySelectorAll('.bucket').forEach((b) => b.addEventListener('click', () => { ans[+b.dataset.i] = +b.dataset.b; sfx('tick'); draw(); }));
-    $('check').addEventListener('click', () => draw(sim.solvePuzzle(cur.id, ans)));
+    $('check').addEventListener('click', () => draw(mask(sim.solvePuzzle(cur.id, ans))));
   };
   draw();
 }
@@ -783,6 +805,10 @@ function pickerScreen() {
     <div class="eyebrow">System design interview practice</div>
     <h1>System Puzzle</h1>
     <p class="sub hand" style="color:var(--ink)">Pick an exercise. Ask, build, fix, defend.</p>
+    <div class="modes" role="radiogroup" aria-label="Mode">
+      <button class="mode ${mode === 'practice' ? 'on' : ''}" data-mode="practice" role="radio" aria-checked="${mode === 'practice'}"><b>🎓 Practice</b><span>Answers explained as you go</span></button>
+      <button class="mode ${mode === 'interview' ? 'on' : ''}" data-mode="interview" role="radio" aria-checked="${mode === 'interview'}"><b>🧑‍⚖️ Interview</b><span>No hints. Answers revealed in the debrief</span></button>
+    </div>
     <div class="picker">${SCENARIOS.map((s) => `
       <button class="scn" data-id="${s.id}">
         <span class="scn-ic">${s.icon}</span>
@@ -792,6 +818,7 @@ function pickerScreen() {
       </button>`).join('')}</div>
     <div class="keys"><kbd>Space</kbd> pause · <kbd>M</kbd> mute · <kbd>1</kbd>–<kbd>9</kbd> buy · drag to look around</div>
   `, 'wide');
+  modal.querySelectorAll('.mode').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode; store.set('sp-mode', mode); sfx('tick'); pickerScreen(); }));
   modal.querySelectorAll('.scn').forEach((b) => b.addEventListener('click', () => {
     unlockAudio();
     sfx('good');
@@ -806,7 +833,7 @@ function choose(scenario) {
 }
 function briefScreen() {
   openModal(`
-    <div class="eyebrow">${sc.icon} ${sc.difficulty} · ~${Math.round((sc.phases.reduce((a, p) => a + p.dur, 0) + 240) / 60)} min</div>
+    <div class="eyebrow">${sc.icon} ${sc.difficulty} · ${interview() ? 'Interview mode' : 'Practice mode'} · ~${Math.round((sc.phases.reduce((a, p) => a + p.dur, 0) + 240) / 60)} min</div>
     <h1>${sc.title}</h1>
     <div class="brief hand">${sc.brief}</div>
     <div class="steps">
@@ -873,6 +900,7 @@ function summaryText(r) {
     '', 'Signals:', ...r.signals.map((s) => `  + ${s}`),
     '', 'Red flags:', ...r.flags.map((s) => `  - ${s}`),
     '', 'Ask next:', ...r.followups.map((s) => `  ? ${s}`),
+    '', 'Answer review:', ...review.map((x) => `  ${x.good ? '✓' : '✕'} ${x.title}: ${x.chosen}${!x.good && x.best ? ` (better: ${x.best})` : ''}`),
     '', 'Timeline:', ...r.timeline.map((e) => `  ${mmss(e.t)} [${sc.phases[e.phase].name}] ${e.kind === 'buy' ? 'Bought ' : ''}${e.text}`),
   ].join('\n');
 }
@@ -904,6 +932,7 @@ function showResults() {
       <div class="r"><h3>⚑ Red flags</h3><ul>${r.flags.map((s) => `<li>${s}</li>`).join('') || '<li>None</li>'}</ul></div>
     </div>
     <div class="ask"><h3>💬 Ask next</h3><ol>${r.followups.map((s) => `<li>${s}</li>`).join('')}</ol></div>
+    <details class="review" ${interview() ? 'open' : ''}><summary>Answer review (${review.filter((x) => x.good).length}/${review.length} strong)</summary><ul>${review.map((x) => `<li class="${x.good ? 'good' : 'bad'}"><b>${x.good ? '✓' : '✕'} ${x.title}</b><span>${x.chosen}</span>${!x.good && x.best ? `<span class="best">Better: ${x.best} · <em>${x.why}</em></span>` : ''}</li>`).join('')}</ul></details>
     <details class="timeline"><summary>Timeline (${tl.length})</summary><ul>${tl.map((e) => `<li class="${e.tone}"><span>${mmss(e.t)}</span><em>${sc.phases[e.phase].name}</em>${e.kind === 'buy' ? '🛒 ' : ['answer', 'puzzle', 'ask'].includes(e.kind) ? '💬 ' : '⚡ '}${e.text}</li>`).join('')}</ul></details>
     <div class="row"><span class="grow"><button class="link" id="others">← Other exercises</button></span><button class="btn alt" id="copy">Copy summary</button><button class="btn" id="again">Play again</button></div>
   `, 'wide');
