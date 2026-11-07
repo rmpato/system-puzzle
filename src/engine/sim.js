@@ -31,7 +31,7 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     tok: {}, demand: {}, load: {}, nodeLoad: {}, hotT: 0, meterT: 0,
     accum: {}, seen: {}, signals: [], flags: [],
     pendingDup: 0, outage: false, queued: 0, raceTimer: 4, raceTaken: {},
-    counts: { duplicate: 0, race: 0, timeout: 0, lost: 0, scaleFirst: 0 },
+    counts: { duplicate: 0, race: 0, timeout: 0, lost: 0, scaleFirst: 0, earlyTraps: 0 },
     firsts: {}, timeline: [], answers: {}, judge: { pts: 0, max: 0 },
     queue: [], scheduled: [], breakQueue: [], breakTotal: 0, ending: false, outageEnd: false,
   };
@@ -176,7 +176,7 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     S.money -= cost;
     S.built[id] = count(id) + 1;
     delete S.hint[id];
-    if (s.trap && S.phase < (s.trapUntil ?? PHASES.length - 1)) flag(`Over-engineering: ${s.name} too early`);
+    if (s.trap && S.phase < (s.trapUntil ?? PHASES.length - 1)) { flag(`Over-engineering: ${s.name} too early`); S.counts.earlyTraps++; }
     log('buy', `${s.name}${ctx.length ? ` (${ctx.join(', ')})` : ''}`, s.trap ? 'bad' : 'info');
     emit('buy', { id, n: count(id) });
     return true;
@@ -419,7 +419,7 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
       if (S.counts.scaleFirst >= 2) add(fl, R.scaleFirst.flag);
       else if (R.scaleFirst.fixes.every(([, fix]) => has(fix))) add(sig, R.scaleFirst.signal);
     }
-    const traps = SHOP.filter((s) => s.trap && has(s.id)).length;
+    const traps = S.counts.earlyTraps; // traps bought in the phase they're legitimate cost upkeep only
     if (!traps && R.noTraps) add(sig, R.noTraps);
 
     const c = S.counts;

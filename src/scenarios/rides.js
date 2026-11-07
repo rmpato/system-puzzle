@@ -73,14 +73,14 @@ export default {
     { name: 'One city', dur: 30, rates: { ping: 4, match: 0.8, trip: 0.4 }, news: ['ping', 'trip'] },
     { name: 'More drivers', dur: 50, rates: { ping: 18, match: 2, tile: 2, eta: 1.5, trip: 0.9 }, news: ['tile', 'eta', 'Drivers ×3'], hazards: { duplicate: 0.1 } },
     { name: 'Friday night', dur: 55, rates: { ping: 28, match: 4.5, tile: 5, eta: 4, trip: 2 }, news: ['Riders ×3', 'Dispatch races'], hazards: { duplicate: 0.12, race: 9 } },
-    { name: 'Concert + rain', dur: 60, rates: { ping: 55, match: 11, tile: 9, eta: 10, trip: 5 }, news: ['Surge ×10'], hazards: { duplicate: 0.18, timeout: 0.12, race: 6, spike: 8, outage: [24, 40] } },
+    { name: 'Concert + rain', dur: 60, rates: { ping: 55, match: 11, tile: 9, eta: 10, trip: 4.5 }, news: ['Surge ×10'], hazards: { duplicate: 0.18, timeout: 0.12, race: 6, spike: 8, outage: [24, 40] } },
   ],
 
   hazards: {
     duplicate: { type: 'trip', fix: 'idem', card: 'double', rep: 4, money: 12, text: '💸 charged twice', blocked: '🔑 duplicate ignored', at: 'psp', firstText: 'First double-charged rider', score: 10 },
     timeout: { type: 'trip', fix: 'recon', card: 'timeout', rep: 1, text: '⏳ fare lost', at: 'psp', firstText: 'Payment timeout lost a fare', score: 5 },
     race: { type: 'trip', fix: 'cas', card: 'race', rep: 5, money: 20, text: '🏁 driver double-booked', blocked: '🔒 driver taken', at: 'db', firstText: 'A driver got two trips', startText: 'Riders now compete for drivers', score: 15 },
-    outage: { node: 'push', label: 'Push service', card: 'notify', rep: 2, startText: 'Push service went down', lostText: '"Driver arriving" pushes were lost', event: { to: 'push', via: 'queue', type: 'push' }, score: 2 },
+    outage: { node: 'push', label: 'Push service', card: 'notify', rep: 1, startText: 'Push service went down', lostText: '"Driver arriving" pushes were lost', event: { to: 'push', via: 'queue', type: 'push' }, score: 2 },
     spike: { card: 'surge' },
     overload: { node: 'db', card: 'dbload', after: 3 },
   },

@@ -38,7 +38,7 @@ export const CARDS = {
     o('Idempotency key per trip charge', true, 'Retries return the same result.'),
     o('Disable the button', false, 'Network retries still duplicate.'),
     o('Refund later', false, 'Not a strategy.')] },
-  timeout: { icon: '⏳', title: 'Payment timed out', text: 'Did the fare charge or not?', fix: 'recon', opts: [
+  timeout: { icon: '⏳', title: 'Payment timed out', text: 'Did the fare charge or not?', opts: [
     o('Mark pending, then reconcile', true, 'Ask the provider by idempotency key.'),
     o('Assume failed, charge again', false, 'Might charge twice.'),
     o('Assume success, move on', false, 'Might ride for free.')] },

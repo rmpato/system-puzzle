@@ -281,7 +281,7 @@ function syncGhosts() {
     hit.userData.buy = s.id;
     g.add(sq, hit);
     g.position.copy(slotFor(s.id, sim.count(s.id)).setY(0));
-    const div = label(g, `<span>${s.icon}</span>$${sim.price(s.id)}`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (S.hint[s.id] && !interview() ? ' hint' : ''));
+    const div = label(g, `<div class="gi"><span>${s.icon}</span>$${sim.price(s.id)}</div>`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (S.hint[s.id] && !interview() ? ' hint' : ''));
     W.ghosts.add(g);
     ghosts[s.id] = { g, div, hit };
   }
