@@ -827,18 +827,20 @@ const toPicker = () => { try { history.replaceState(null, '', location.pathname)
 function pickerScreen() {
   const best = store.get('sp-best', {});
   openModal(`
+    <div class="picker-head"><div>
     <div class="eyebrow">System design interview practice</div>
     <h1>System Puzzle</h1>
     <p class="sub hand" style="color:var(--ink)">Pick an exercise. Ask, build, fix, defend.</p>
+    </div>
     <div class="modes" role="radiogroup" aria-label="Mode">
       <button class="mode ${mode === 'practice' ? 'on' : ''}" data-mode="practice" role="radio" aria-checked="${mode === 'practice'}"><b>🎓 Practice</b><span>Answers explained as you go</span></button>
-      <button class="mode ${mode === 'interview' ? 'on' : ''}" data-mode="interview" role="radio" aria-checked="${mode === 'interview'}"><b>🧑‍⚖️ Interview</b><span>No hints. Answers revealed in the debrief</span></button>
-    </div>
+      <button class="mode ${mode === 'interview' ? 'on' : ''}" data-mode="interview" role="radio" aria-checked="${mode === 'interview'}"><b>🧑‍⚖️ Interview</b><span>No hints · answers in the debrief</span></button>
+    </div></div>
     <div class="picker">${SCENARIOS.map((s) => `
       <button class="scn" data-id="${s.id}">
         <span class="scn-ic">${s.icon}</span>
         <span class="scn-body"><b>${s.title}</b><span>${s.pitch}</span>
-          <span class="tags">${(s.topics || []).slice(0, 4).map((t) => `<i>${t}</i>`).join('')}</span></span>
+          <span class="tags">${(s.topics || []).slice(0, 2).map((t) => `<i>${t}</i>`).join('')}</span></span>
         <span class="scn-meta"><em class="diff ${String(s.difficulty).toLowerCase()}">${s.difficulty}</em>${best[s.id] ? `<strong class="grade-sm ${best[s.id]}" title="Best grade">${best[s.id]}</strong>` : ''}</span>
       </button>`).join('')}</div>
     <div class="keys"><kbd>Space</kbd> pause · <kbd>M</kbd> mute · <kbd>1</kbd>–<kbd>9</kbd> buy · drag to look around</div>

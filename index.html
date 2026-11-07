@@ -214,7 +214,14 @@
   /* scenario picker */
   .card.picker-card { width: min(1000px, 100%); }
   .picker-card .picker { grid-template-columns: repeat(3, 1fr); }
-  .picker-card .modes { max-width: 640px; }
+  .picker-head { display: grid; grid-template-columns: 1fr minmax(0, 460px); gap: 20px; align-items: end; }
+  .picker-head h1 { margin-bottom: 4px; }
+  .picker-head .sub { margin-bottom: 0; }
+  .picker-card .modes { margin: 0; grid-template-columns: 1fr 1fr; }
+  .picker-card .scn { padding: 11px 12px; }
+  .picker-card .scn-body b { font-size: 17px; }
+  .picker-card .tags { flex-wrap: nowrap; overflow: hidden; }
+  .picker-card .tags i { white-space: nowrap; }
   .picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; margin: 14px 0 6px; text-align: left; }
   .scn { display: flex; gap: 12px; align-items: flex-start; padding: 14px; background: var(--card); border: 2px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow); text-align: left; transition: transform .1s, box-shadow .1s; }
   .scn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--ink); }
