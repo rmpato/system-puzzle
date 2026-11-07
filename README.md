@@ -44,6 +44,12 @@ Every exercise ends with a real traffic surge (a viral link, a doorbuster, midni
 
 Controls: drag to look around · click any part to inspect it · `Space` pause · `M` mute · `1`–`9` buy · `1×/2×` speed.
 
+## Learn
+
+**📚 Learn the basics** (on the picker, or the 📚 button in-game, which pauses) is a library of 26 short primers on the concepts behind the exercises: the interview loop, estimation, latency numbers, caching, CDNs, replicas, pooling, sharding, queues, the outbox, fan-out, idempotency, races, reconciliation, delivery guarantees, WebSockets, geo indexing and more. Each one has a before/after flow sketch, when to use it, what goes wrong, rules of thumb, a line to say in the interview, and the exercises where you practice it.
+
+It is also linked in context: after you answer a card (Practice mode), from the part inspector, and in the debrief under **Concepts to review** (from wrong answers, missing parts and traps). Content lives in `src/learn.js`; a card can point to a concept with `learn: '<id>'`.
+
 ## Google Cloud icons
 
 Every part is shown with the Google Cloud product you would use for it (Compute Engine, Cloud SQL, Memorystore, Pub/Sub, Cloud CDN, Cloud Armor, Spanner, GKE…). Design patterns that aren't products (idempotency keys, locks, sequence numbers) keep an emoji. The shop is grouped Compute · Data · Cache · Async · Edge · AI · Patterns, clicking a part opens an inspector (product, load, capacity, failures), and the debrief draws your **final architecture** as a GCP-style diagram you can download as a standalone SVG.
@@ -58,6 +64,7 @@ src/main.js             renderer and UI (data-driven, no scenario specifics)
 src/engine/sim.js       pure simulation: pools, requests, hazards, scoring, interviewer report
 src/engine/models.js    whiteboard-style 3D model library
 src/gcp.js              part → Google Cloud product icon + shop section
+src/learn.js            concept primers for the Learn library
 assets/gcp/             official Google Cloud product icons (SVG)
 src/scenarios/*.js      one file per exercise (+ *-copy.js for its questions and puzzles)
 src/scenarios/index.js  registry (picker order)

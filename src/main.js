@@ -5,6 +5,7 @@ import { createSim } from './engine/sim.js';
 import { makeModel, INK } from './engine/models.js';
 import { SCENARIOS, byId } from './scenarios/index.js';
 import { gcpOf, iconHtml, CATS, PRODUCTS } from './gcp.js';
+import { CONCEPTS, GROUPS, conceptById, conceptForItem, conceptForCard } from './learn.js';
 
 const $ = (id) => document.getElementById(id);
 const FAIL_COLOR = '#e5484d';
@@ -601,12 +602,14 @@ function renderHud() {
     <div class="note stat ${S.rep < 35 ? 'low' : ''}" id="rep"><small>Reputation</small><b>${Math.round(S.rep)}</b><div class="bar"><i style="width:${Math.max(0, S.rep)}%"></i></div></div>
     <div class="spacer"></div>
     <div class="note legend top">${legendHtml}</div>
+    <button class="note iconbtn" data-learn-open aria-label="Learn the basics" title="Learn the basics (pauses)">📚</button>
     <button class="note iconbtn" id="speedBtn" aria-label="Speed" title="Speed">${speed === 1 ? '1×' : '2×'}</button>
     <button class="note iconbtn" id="pauseBtn" aria-label="${S.userPaused ? 'Resume' : 'Pause'}">${S.userPaused ? '▶' : '⏸'}</button>
     <button class="note iconbtn" id="muteBtn" aria-label="${muted ? 'Unmute' : 'Mute'}">${muted ? '🔇' : '🔊'}</button>
   `;
 }
 $('hud').addEventListener('click', (e) => {
+  if (e.target.closest('[data-learn-open]')) openLearn();
   if (e.target.closest('#pauseBtn')) togglePause();
   if (e.target.closest('#muteBtn')) toggleMute();
   if (e.target.closest('#speedBtn')) { speed = speed === 1 ? 2 : 1; renderHud(); }
@@ -619,6 +622,7 @@ function togglePause() {
   renderHud();
 }
 addEventListener('keydown', (e) => {
+  if (!learnEl.hidden) { if (e.key === 'Escape') closeLearn(); return; }
   if (e.code === 'Space' && $('modal').hidden) { e.preventDefault(); togglePause(); }
   if (e.key === 'm' || e.key === 'M') toggleMute();
   if (playing() && $('modal').hidden && /^[1-9]$/.test(e.key)) { const s = shopOrder[+e.key - 1]; if (s) buy(s.id); }
@@ -745,7 +749,8 @@ function renderInspector() {
     <button class="insp-x" aria-label="Close">×</button>
     <div class="insp-h">${ico(key, obj, 'gx lg')}<div><b>${title}</b><small>${g.name ? `Google Cloud · ${g.name}` : node?.model === 'external' ? 'External service' : node?.model === 'users' ? 'Clients' : 'Design pattern'}</small></div></div>
     ${it?.desc ? `<p>${it.desc}</p>` : ''}
-    ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}`;
+    ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
+    ${it && conceptForItem(key) ? `<div class="insp-learn">${learnLink(conceptForItem(key).id, '📚 Learn:')}</div>` : ''}`;
   insp.querySelector('.insp-x').addEventListener('click', closeInspector);
 }
 addEventListener('keydown', (e) => { if (e.key === 'Escape') closeInspector(); });
@@ -903,7 +908,8 @@ function showCard(cur) {
   modal.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => {
     const i = +b.dataset.i;
     const res = sim.answerCard(cur.id, i);
-    review.push({ title: clean(c.title), chosen: clean(c.opts[i].t), best: clean(c.opts[res.best].t), why: clean(c.opts[res.best].why), good: res.good });
+    const concept = conceptForCard(sc.id, cur.id, c);
+    review.push({ title: clean(c.title), chosen: clean(c.opts[i].t), best: clean(c.opts[res.best].t), why: clean(c.opts[res.best].why), good: res.good, learn: concept });
     if (interview()) {
       sfx('tick');
       modal.querySelectorAll('.opt').forEach((x) => { x.disabled = true; if (+x.dataset.i === i) x.classList.add('on'); });
@@ -920,7 +926,7 @@ function showCard(cur) {
     });
     const fix = res.fix && sim.item(res.fix);
     const reward = `<span class="delta ${res.good ? 'up' : 'down'}">${res.good ? `+$${sim.T.cardReward}` : `−${sim.T.cardPenalty} rep`}</span>${fix ? ` <span class="fix">→ ${ico(fix.id, fix, 'gx sm')} ${fix.name}${res.good ? ` −${Math.round((1 - sim.T.discount) * 100)}% · 💳 even if short` : ''}</span>` : ''}`;
-    modal.querySelector('.card').insertAdjacentHTML('beforeend', cont(cur.closing && cur.step === cur.total ? 'Results' : 'Continue', reward));
+    modal.querySelector('.card').insertAdjacentHTML('beforeend', `${concept ? `<div class="learn-inline">${learnLink(concept, '📚 Learn:')}</div>` : ''}${cont(cur.closing && cur.step === cur.total ? 'Results' : 'Continue', reward)}`);
     bindCont();
   }));
 }
@@ -1018,6 +1024,7 @@ function pickerScreen() {
     <div class="eyebrow">System design interview practice</div>
     <h1>System Puzzle</h1>
     <p class="sub hand" style="color:var(--ink)">Pick an exercise. Ask, build, fix, defend.</p>
+    <button class="learn-cta" data-learn-open>📚 New to system design? <b>Learn the basics</b></button>
     </div>
     <div class="modes" role="radiogroup" aria-label="Mode">
       <button class="mode ${mode === 'practice' ? 'on' : ''}" data-mode="practice" role="radio" aria-checked="${mode === 'practice'}"><b>🎓 Practice</b><span>Answers explained as you go</span></button>
@@ -1033,6 +1040,7 @@ function pickerScreen() {
       </button>`).join('')}</div>
     <div class="keys"><kbd>Space</kbd> pause · <kbd>M</kbd> mute · <kbd>1</kbd>–<kbd>9</kbd> buy · click a part to inspect · drag to look around</div>
   `, 'wide picker-card');
+  modal.querySelector('.learn-cta').addEventListener('click', () => openLearn());
   modal.querySelectorAll('.mode').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode; store.set('sp-mode', mode); sfx('tick'); pickerScreen(); }));
   modal.querySelectorAll('.scn').forEach((b) => b.addEventListener('click', () => {
     unlockAudio();
@@ -1230,6 +1238,11 @@ function showResults() {
       <div class="g"><h3>✓ Signals</h3><ul>${r.signals.map((s) => `<li>${s}</li>`).join('') || '<li>None</li>'}</ul></div>
       <div class="r"><h3>⚑ Red flags</h3><ul>${r.flags.map((s) => `<li>${s}</li>`).join('') || '<li>None</li>'}</ul></div>
     </div>
+    ${(() => {
+      const missing = (sc.report?.required || []).filter((q) => !sim.has(q.item)).map((q) => conceptForItem(q.item)?.id);
+      const ids = [...new Set([...review.filter((x) => !x.good && x.learn).map((x) => x.learn), ...missing, ...(Object.keys(S.built).some((id) => sim.item(id).trap) ? ['simple'] : [])].filter(Boolean))];
+      return ids.length ? `<div class="review-learn"><h3>📚 Concepts to review</h3><div>${ids.map((id) => learnLink(id, conceptById(id).icon)).join('')}</div></div>` : '';
+    })()}
     <div class="ask"><h3>💬 Ask next</h3><ol>${r.followups.map((s) => `<li>${s}</li>`).join('')}</ol></div>
     <details class="review" ${interview() ? 'open' : ''}><summary>Answer review (${review.filter((x) => x.good).length}/${review.length} strong)</summary><ul>${review.map((x) => `<li class="${x.good ? 'good' : 'bad'}"><b>${x.good ? '✓' : '✕'} ${x.title}</b><span>${x.chosen}</span>${!x.good && x.best ? `<span class="best">Better: ${x.best} · <em>${x.why}</em></span>` : ''}</li>`).join('')}</ul></details>
     <details class="timeline"><summary>Timeline (${tl.length})</summary><ul>${tl.map((e) => `<li class="${e.tone}"><span>${mmss(e.t)}</span><em>${sc.phases[e.phase].name}</em>${e.kind === 'buy' ? '🛒 ' : ['answer', 'puzzle', 'ask'].includes(e.kind) ? '💬 ' : '⚡ '}${e.text}</li>`).join('')}</ul></details>
@@ -1260,6 +1273,80 @@ function showResults() {
     e.target.textContent = 'Copied ✓';
   });
 }
+
+// ═════════════════════════════════════════════ learn: concept primers (library + contextual links)
+const learnEl = document.createElement('div');
+learnEl.id = 'learn'; learnEl.hidden = true;
+document.body.appendChild(learnEl);
+let learnPaused = false, learnQuery = '';
+const learnIcon = (ic, cls = 'gx') => (PRODUCTS[ic] ? `<img class="${cls}" src="./assets/gcp/${ic}.svg" alt="">` : `<span class="${cls} emo">${ic}</span>`);
+const learnLink = (id, prefix = '📚') => { const c = conceptById(id); return c ? `<button class="learn-link" data-learn="${c.id}">${prefix} ${c.title}</button>` : ''; };
+const scenariosFor = (c) => SCENARIOS.filter((x) => x.shop.some((it) => (c.items || []).includes(it.id)));
+function openLearn(id = null) {
+  if (sim && S.mode === 'play' && !S.userPaused) { togglePause(); learnPaused = true; }
+  closeInspector();
+  learnEl.hidden = false;
+  id ? renderConcept(id) : renderLibrary();
+  sfx('tick');
+}
+function closeLearn() {
+  learnEl.hidden = true;
+  learnEl.innerHTML = '';
+  if (learnPaused && sim && S.userPaused) togglePause();
+  learnPaused = false;
+}
+function renderLibrary() {
+  const q = learnQuery.trim().toLowerCase();
+  const match = (c) => !q || [c.title, c.idea, ...(c.when || []), ...(c.watch || [])].join(' ').toLowerCase().includes(q);
+  learnEl.innerHTML = `<div class="learn-card card">
+    <div class="learn-top"><div><div class="eyebrow">Learn the basics</div><h2>📚 Concepts behind every exercise</h2>
+      <p class="sub">Short, practical primers. Each one: the idea, when to use it, what goes wrong, and how to say it in an interview.</p></div>
+      <button class="insp-x learn-x" aria-label="Close">×</button></div>
+    <input class="learn-q" type="search" placeholder="Search: cache, race, queue…" value="${learnQuery.replace(/"/g, '&quot;')}" aria-label="Search concepts">
+    ${GROUPS.map(([g, name]) => {
+      const list = CONCEPTS.filter((c) => c.group === g && match(c));
+      return list.length ? `<h3 class="learn-g">${name}</h3><div class="learn-grid">${list.map((c) => `<button class="learn-tile" data-learn="${c.id}"><span class="lt-ic">${c.icon}</span><span><b>${c.title}</b><small>${c.idea.split(/(?<=[.!?])\s/)[0]}</small></span></button>`).join('')}</div>` : '';
+    }).join('') || '<p class="sub">No concept matches that search.</p>'}
+  </div>`;
+  const inp = learnEl.querySelector('.learn-q');
+  inp.addEventListener('input', () => { learnQuery = inp.value; renderLibrary(); const i2 = learnEl.querySelector('.learn-q'); i2.focus(); i2.setSelectionRange(i2.value.length, i2.value.length); });
+  if (!q) learnEl.querySelector('.learn-x').focus({ preventScroll: true });
+}
+function renderConcept(id) {
+  const c = conceptById(id);
+  if (!c) return renderLibrary();
+  const i = CONCEPTS.indexOf(c), prev = CONCEPTS[i - 1], next = CONCEPTS[i + 1];
+  const group = GROUPS.find(([g]) => g === c.group)?.[1] || '';
+  const flow = (f) => `<div class="flow ${f.tone || ''}">${f.label ? `<span class="flow-l">${f.label}</span>` : ''}<div class="flow-row">${f.nodes.map((n, k) => `${k ? `<span class="fa"><i>${f.arrows?.[k - 1] || ''}</i></span>` : ''}<span class="fn">${learnIcon(n[0])}<span>${n[1]}</span></span>`).join('')}</div></div>`;
+  const where = scenariosFor(c);
+  const canStart = !sim;
+  learnEl.innerHTML = `<div class="learn-card card concept">
+    <div class="learn-top"><button class="link" data-learn-home>← All concepts</button><button class="insp-x learn-x" aria-label="Close">×</button></div>
+    <div class="eyebrow">${group}</div>
+    <h2><span class="c-ic">${c.icon}</span>${c.title}</h2>
+    <p class="idea">${c.idea}</p>
+    ${c.flows ? `<div class="flows">${c.flows.map(flow).join('')}</div>` : ''}
+    ${c.numbers ? `<div class="numbers"><b>Rules of thumb</b><ul>${c.numbers.map((n) => `<li>${n}</li>`).join('')}</ul></div>` : ''}
+    <div class="cols learn-cols">
+      <div class="g"><h3>✓ Use it when</h3><ul>${c.when.map((x) => `<li>${x}</li>`).join('')}</ul></div>
+      <div class="r"><h3>⚠ Watch out</h3><ul>${c.watch.map((x) => `<li>${x}</li>`).join('')}</ul></div>
+    </div>
+    <div class="say"><b>💬 Say it like this</b><p>"${c.say}"</p></div>
+    ${c.game ? `<p class="game-note">🎮 ${c.game}</p>` : ''}
+    ${where.length ? `<div class="where"><b>Practice it in</b>${where.map((x) => canStart ? `<button class="where-chip" data-start="${x.id}">${x.icon} ${x.title}</button>` : `<span class="where-chip">${x.icon} ${x.title}</span>`).join('')}</div>` : ''}
+    <div class="row learn-nav"><span class="grow">${prev ? `<button class="link" data-learn="${prev.id}">← ${prev.title}</button>` : ''}</span>${next ? `<button class="link" data-learn="${next.id}">${next.title} →</button>` : ''}</div>
+  </div>`;
+  learnEl.querySelector('.learn-card').scrollTop = 0;
+  learnEl.querySelector('.learn-x').focus({ preventScroll: true });
+}
+document.addEventListener('click', (e) => {
+  const l = e.target.closest('[data-learn]');
+  if (l) { e.preventDefault(); return learnEl.hidden ? openLearn(l.dataset.learn) : (renderConcept(l.dataset.learn), sfx('tick')); }
+  if (e.target.closest('[data-learn-home]')) return renderLibrary();
+  if (e.target.closest('.learn-x') || e.target === learnEl) return closeLearn();
+  const st = e.target.closest('[data-start]');
+  if (st) { closeLearn(); try { history.replaceState(null, '', '#' + st.dataset.start); } catch {} unlockAudio(); choose(byId(st.dataset.start)); }
+});
 
 // ═════════════════════════════════════════════ boot
 const fromHash = byId(location.hash.slice(1));
