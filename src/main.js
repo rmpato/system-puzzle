@@ -666,7 +666,18 @@ const cont = (labelText = 'Continue', reward = '') => `<div class="row"><span cl
 function bindCont() {
   const b = $('cont');
   b.focus({ preventScroll: true });
-  b.addEventListener('click', () => { closeModal(); sim.next(); shopSig = ''; renderShop(); });
+  b.addEventListener('click', () => { closeModal(); sim.next(); shopSig = ''; renderShop(); maybeCoach(); });
+}
+// First game ever: once the opening question is answered, point at the shop for a few seconds.
+function maybeCoach() {
+  if (S.mode !== 'play' || S.phase !== 0 || store.get('sp-coached', false)) return;
+  store.set('sp-coached', true);
+  const n = document.createElement('div');
+  n.className = 'coach';
+  n.innerHTML = '👇 Buy parts here <span>or click a dashed slot on the board</span>';
+  document.body.appendChild(n);
+  setTimeout(() => n.classList.add('out'), 6500);
+  setTimeout(() => n.remove(), 7200);
 }
 function eyebrow(cur) {
   if (cur.incident && cur.id === sc.startCard) return '<div class="eyebrow">Interviewer asks</div>';

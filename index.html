@@ -206,6 +206,10 @@
   .timeline li.good { background: var(--good-bg); }
   .timeline li.bad { background: var(--bad-bg); }
 
+  .coach { position: fixed; left: 50%; bottom: 112px; transform: translateX(-50%) rotate(-1.5deg); padding: 8px 14px; background: var(--note); border: 2px solid var(--ink); border-radius: 10px; box-shadow: var(--shadow); font: 700 19px var(--font-hand); pointer-events: none; z-index: 6; animation: coach .9s ease-in-out infinite alternate; transition: opacity .6s; }
+  .coach span { display: block; font-weight: 400; font-size: 15px; color: var(--muted); }
+  .coach.out { opacity: 0; }
+  @keyframes coach { to { bottom: 120px; } }
   /* scenario picker */
   .card.picker-card { width: min(1000px, 100%); }
   .picker-card .picker { grid-template-columns: repeat(3, 1fr); }
