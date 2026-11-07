@@ -37,9 +37,9 @@ export default {
       symptom: ['outage', 'hazard:timeout'], proactive: 1 },
     { id: 'trend', icon: '📈', name: 'Trending job', cost: 180, desc: 'New hot terms in minutes', model: 'gear', color: '#fbc3dc', pos: [14.5, 4.5], label: 'Trending',
       symptom: 'type:news', proactive: 2 },
-    { id: 'personal', icon: '👤', name: 'Personalize', cost: 220, upkeep: 2, trap: true, desc: 'Per-user ranking · costs $2/s', model: 'sphere', color: '#ffb3b3', pos: [-3, 6], label: 'Personalized' },
-    { id: 'shard', icon: '🗂️', name: 'Shard trie', cost: 300, upkeep: 3, trap: true, desc: '+capacity · costs $3/s', model: 'shards', color: '#ffc98a', pos: [0, -6.5], label: 'Trie shards a–m / n–z' },
-    { id: 'region', icon: '🌍', name: 'Multi-region', cost: 280, upkeep: 3, trap: true, desc: '+capacity · costs $3/s', model: 'globe', pos: [2.5, 6], label: 'Active-active' },
+    { id: 'personal', icon: '👤', name: 'Personalize', cost: 160, upkeep: 3, trap: true, desc: 'Per-user ranking · costs $3/s', model: 'sphere', color: '#ffb3b3', pos: [-3, 6], label: 'Personalized' },
+    { id: 'shard', icon: '🗂️', name: 'Shard trie', cost: 300, upkeep: 4, trap: true, desc: '+capacity · costs $4/s', model: 'shards', color: '#ffc98a', pos: [0, -6.5], label: 'Trie shards' },
+    { id: 'region', icon: '🌍', name: 'Multi-region', cost: 280, upkeep: 4, trap: true, desc: '+capacity · costs $4/s', model: 'globe', pos: [2.5, 6], label: 'Active-active' },
   ],
 
   wires: [
@@ -63,7 +63,7 @@ export default {
       { pool: 'api', cost: 1, mods: { debounce: 0.35 } },
       { pool: 'db', cost: 1.2, mods: { trie: 0, debounce: 0.35 } },
     ], hops: [{ node: 'trie', if: 'trie' }] },
-    search: { name: 'Search', color: '#1f9d55', value: 3, steps: [{ pool: 'api', cost: 1 }, { pool: 'db', cost: 1, mods: { trie: 0.3 } }],
+    search: { name: 'Search', color: '#1f9d55', value: 2, steps: [{ pool: 'api', cost: 1 }, { pool: 'db', cost: 1, mods: { trie: 0.3 } }],
       event: { from: 'api', to: 'logs', via: 'queue', type: 'qlog' } },
     hot: { name: 'Hot prefix', color: '#e8930c', bypass: { item: 'cdn', node: 'cdn' }, steps: [{ pool: 'api', cost: 1.5 }, { pool: 'db', cost: 1.2, mods: { trie: 0 } }],
       cardOnSeen: 'hot', firstText: 'Everyone types "weath…" at once' },
@@ -76,7 +76,7 @@ export default {
     { name: 'Launch', dur: 30, rates: { key: 4, search: 0.6 }, news: ['key', 'search'] },
     { name: 'Growth', dur: 50, rates: { key: 10, search: 1.2, hot: 2 }, news: ['hot', 'Traffic ×3'], hazards: { timeout: 0.08, outage: [22, 38] } },
     { name: 'Scale', dur: 55, rates: { key: 18, search: 2, hot: 5, news: 1 }, news: ['news', 'Traffic ×5'], hazards: { timeout: 0.1 } },
-    { name: 'Breaking news', dur: 60, rates: { key: 28, search: 3, hot: 8, news: 2.5 }, news: ['Traffic ×7'], hazards: { timeout: 0.1, spike: 40 },
+    { name: 'Breaking news', dur: 60, rates: { key: 32, search: 3, hot: 10, news: 2.5 }, news: ['Traffic ×7'], hazards: { timeout: 0.1, spike: 40 },
       surge: { at: 12, dur: 14, mult: 3, label: 'Breaking news', types: ['news', 'hot', 'search'], card: 'surge' } },
   ],
 

@@ -95,10 +95,18 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     if (delay) S.scheduled.push({ at: S.time + delay, key });
     else enqueue(key);
   }
+  // Incident cards are spaced by at least CARD_GAP seconds of play so they never stack back to back.
+  const CARD_GAP = 4;
   function enqueue(key) {
     if (S.mode === 'over') return;
+    const busy = S.mode === 'incident' || S.queue.length;
+    // cards that point at a fix are urgent; informational ones wait for a quieter moment
+    if (!CARDS[key]?.fix && (busy || (S.lastCardAt !== undefined && S.time - S.lastCardAt < CARD_GAP))) {
+      S.scheduled.push({ at: Math.max(S.time, (S.lastCardAt ?? S.time)) + CARD_GAP, key });
+      return;
+    }
     S.queue.push(key);
-    if (S.mode === 'play') { S.mode = 'incident'; emit('incident', key); }
+    if (S.mode === 'play') { S.mode = 'incident'; S.lastCardAt = S.time; emit('incident', key); }
   }
   function current() {
     if (S.mode === 'incident') return { kind: 'card', id: S.queue[0], data: CARDS[S.queue[0]], incident: true };
