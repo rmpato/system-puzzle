@@ -207,6 +207,9 @@
   .timeline li.bad { background: var(--bad-bg); }
 
   /* scenario picker */
+  .card.picker-card { width: min(1000px, 100%); }
+  .picker-card .picker { grid-template-columns: repeat(3, 1fr); }
+  .picker-card .modes { max-width: 640px; }
   .picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 12px; margin: 14px 0 6px; text-align: left; }
   .scn { display: flex; gap: 12px; align-items: flex-start; padding: 14px; background: var(--card); border: 2px solid var(--ink); border-radius: 12px; box-shadow: var(--shadow); text-align: left; transition: transform .1s, box-shadow .1s; }
   .scn:hover { transform: translate(-2px, -2px); box-shadow: 5px 5px 0 var(--ink); }

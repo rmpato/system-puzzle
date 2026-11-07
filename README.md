@@ -1,6 +1,6 @@
-# Marketplace Rush
+# System Puzzle
 
-A 3D system-design interview game (Three.js), based on the "Backend Engineer · System Design Interview" guide. The candidate keeps a marketplace backend alive from MVP to Black Friday. Along the way they answer the guide's questions at the moment each problem actually happens, and solve quick whiteboard puzzles between phases.
+System-design interview practice as a 3D whiteboard game (Three.js). Pick an exercise, ask clarifying questions, build the architecture piece by piece while live traffic flows through it, fix incidents as they happen, solve whiteboard puzzles between phases, and get an interview debrief at the end.
 
 ## Run
 
@@ -9,52 +9,55 @@ python3 -m http.server 5199
 # open http://localhost:5199
 ```
 
-It needs internet access for Three.js (unpkg) and the fonts. There is no build step.
+No build step. It needs internet access for Three.js (unpkg) and the fonts. Desktop browser.
 
-## How a session goes (~10 min)
+## Exercises
 
-1. **Brief + clarifying questions.** The guide's prompt, then pick 3 questions. Good ones add budget; skipping questions or asking about Kafka/K8s is a red flag.
-2. **Four phases:** MVP → Growth → Scale → Black Friday. Colored requests flow from users through the API to the DB, payments and notifications. Buy parts from the bottom bar or by clicking the dashed slots on the board.
-3. **Incidents** fire when the problem shows up: images through the API, slow `/search`, double charge, too many DB connections, DB at 100%, notifications down, notification spike, payment timeout, last item in stock.
-4. **Whiteboard breaks** between phases: the happy path (ordering), the `POST /checkout` contract, a mock endpoint for the frontend, domain boundaries, a Flutter contract change, splitting the monolith, the cart model, replica vs. primary reads, and the order-history index.
-5. **Closing questions:** an MVP with 3 people, and the hardest decision to reverse.
-6. **Debrief for the interviewer:** grade, uptime/judgement/revenue/reputation, a snapshot of the final architecture, signals and red flags (including proactive vs. reactive), **Ask next** (follow-up questions from the guide chosen by the candidate's weak spots), a full timeline, and **Copy summary** for the scorecard.
+| Exercise | Difficulty | Core lessons |
+| --- | --- | --- |
+| 🔗 Tiny Links (URL shortener) | Easy | Read-heavy caching, ID generation, unique aliases, async click analytics, CDN for viral links |
+| 🛒 Marketplace Rush | Medium | Idempotent payments, connection pooling, read replicas, queues, stock races (from the Backend Engineer interview guide) |
+| 🎬 Video Night (YouTube-lite) | Medium | CDN playback, pre-signed uploads, async transcoding, batched view counters |
+| 💬 Chat at Scale (WhatsApp-like) | Hard | WebSockets vs polling, idempotent sends, ordering, presence in memory, offline push |
+| 🎟️ Ticket Drop (Ticketmaster) | Hard | Waiting room, seat holds with TTL, bot defense, payment reconciliation |
+| 🚕 Ride Hail (Uber-like) | Expert | Geo index for location pings, atomic dispatch, ETA caching, surge |
 
-Controls: drag to look around, `Space` to pause, `M` to mute.
+## Modes
 
-## Coverage of the guide
+- **🎓 Practice:** each answer is explained right away, and the shop glows toward the fix for the current incident.
+- **🧑‍⚖️ Interview:** for running it with a candidate. No hints, and answers are recorded but not revealed. The debrief has the full answer review.
 
-| Guide section | In the game |
-| --- | --- |
-| Clarifying questions | Opening question picker (users, payments, notifications, cart, consistency, multi-tenancy) |
-| 1. Start / happy path | Happy-path ordering puzzle |
-| 1.1 API design | Checkout contract, response shape, mock for the frontend, Flutter field rename |
-| 2. Initial architecture | Monolith vs. microservices, domain boundaries, splitting later; microservices/K8s/sharding traps |
-| 3. Database | Cart model, order-history index, 40-connection limit + PgBouncer, replica routing, DB overload |
-| 4. Payments & idempotency | Double click, redelivery, provider timeout and reconciliation |
-| 5. Notifications | Outage (queue vs. direct calls), Black Friday spike |
-| 6. Scalability | Search index, CDN for images, last-item race |
-| 7. Trade-offs | MVP with 3 people, hardest decision to reverse |
-| Signals / red flags | Scored and listed in the debrief |
+## A session (~8–10 min)
 
-## Code
+1. **Brief + 3 clarifying questions.** Good ones add budget; skipping questions or over-engineering questions are red flags.
+2. **3–4 phases of traffic.** Colored requests flow through the board. Buy parts from the bottom bar (or keys `1`–`9`, or click the dashed slots). Overloaded parts turn red. Traps (Kubernetes, microservices, sharding too early…) cost upkeep.
+3. **Incidents** fire when the problem actually happens: duplicates, races, outages, timeouts, hot databases, connection limits.
+4. **Whiteboard breaks** between phases: order, pick and sort puzzles plus single-choice cards.
+5. **Debrief:** grade, uptime, judgement, revenue, reputation, a timelapse of how the architecture evolved, signals and red flags (proactive vs reactive), **Ask next** follow-ups for the interviewer, the answer review, a timeline, and **Copy summary**.
 
-- `src/content.js`: all copy and data (questions, incidents, puzzles, follow-ups, shop, phases)
-- `src/sim.js`: pure simulation (no DOM). Economy, traffic, incidents, scoring and the interviewer report.
-- `src/main.js`: Three.js scene and UI
-- `tools/balance.mjs`: headless bot that plays the real sim with several strategies
+Controls: drag to look around · `Space` pause · `M` mute · `1×/2×` speed.
 
-```bash
-node tools/balance.mjs 200          # all strategies
-FLAGS=1 node tools/balance.mjs 200  # include most common red flags
+## Project layout
+
+```
+index.html              styles + shell
+src/main.js             renderer and UI (data-driven, no scenario specifics)
+src/engine/sim.js       pure simulation: pools, requests, hazards, scoring, interviewer report
+src/engine/models.js    whiteboard-style 3D model library
+src/scenarios/*.js      one file per exercise (+ *-copy.js for its questions and puzzles)
+src/scenarios/index.js  registry (picker order)
+tools/validate.mjs      schema and layout checks
+tools/balance.mjs       headless bot: 6 strategies × N runs per scenario
+SCENARIOS.md            how to write a new exercise
 ```
 
-Current balance (200 runs each):
+```bash
+node tools/validate.mjs                 # all scenarios
+node tools/balance.mjs all 150          # balance report for every scenario
+node tools/balance.mjs rides 150        # one scenario
+FLAGS=1 node tools/balance.mjs src/scenarios/my-new.js 150
+```
 
-| Strategy | Result |
-| --- | --- |
-| expert | S |
-| strong human (reacts late, 85% right) | S/A |
-| average (70% right, follows hints) | A/B |
-| over-engineer | C/D, sometimes runs out of money |
-| scale-only / idle | F (site goes down) |
+## Adding an exercise
+
+See [SCENARIOS.md](SCENARIOS.md). In short: write `src/scenarios/<id>.js`, get `validate` to 0 errors and `balance` to its targets (expert ≈ always S, scale-only and idle fail), then register it in `src/scenarios/index.js`.

@@ -404,8 +404,10 @@ function snapshot(name) {
   let url = '';
   try {
     const c = document.createElement('canvas');
-    c.width = 480; c.height = Math.round(480 * canvas.height / canvas.width);
-    c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height);
+    // crop to the middle of the board, where the architecture lives
+    const sx = canvas.width * 0.13, sy = canvas.height * 0.2, sw = canvas.width * 0.74, sh = canvas.height * 0.68;
+    c.width = 520; c.height = Math.round(520 * sh / sw);
+    c.getContext('2d').drawImage(canvas, sx, sy, sw, sh, 0, 0, c.width, c.height);
     url = c.toDataURL('image/jpeg', 0.8);
   } catch {}
   W.ghosts.visible = true;
@@ -817,7 +819,7 @@ function pickerScreen() {
         <span class="scn-meta"><em class="diff ${String(s.difficulty).toLowerCase()}">${s.difficulty}</em>${best[s.id] ? `<strong class="grade-sm ${best[s.id]}" title="Best grade">${best[s.id]}</strong>` : ''}</span>
       </button>`).join('')}</div>
     <div class="keys"><kbd>Space</kbd> pause · <kbd>M</kbd> mute · <kbd>1</kbd>–<kbd>9</kbd> buy · drag to look around</div>
-  `, 'wide');
+  `, 'wide picker-card');
   modal.querySelectorAll('.mode').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode; store.set('sp-mode', mode); sfx('tick'); pickerScreen(); }));
   modal.querySelectorAll('.scn').forEach((b) => b.addEventListener('click', () => {
     unlockAudio();
