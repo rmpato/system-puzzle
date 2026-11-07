@@ -693,7 +693,7 @@ function maybeCoach() {
 }
 function eyebrow(cur) {
   if (cur.incident && cur.id === sc.startCard) return '<div class="eyebrow">Interviewer asks</div>';
-  if (cur.incident) return '<div class="eyebrow danger">Incident</div>';
+  if (cur.incident) return `<div class="eyebrow danger">Incident${S.queue.length > 1 ? ` · 1 of ${S.queue.length}` : ''}</div>`;
   return `<div class="eyebrow">${cur.closing ? 'Closing questions' : 'Whiteboard'} · ${cur.step}/${cur.total}</div>`;
 }
 function showCurrent() {
