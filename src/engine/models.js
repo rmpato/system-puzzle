@@ -28,10 +28,7 @@ const ring = (r, y, axis = 'x') => {
   return t;
 };
 
-export const MODEL_KINDS = [
-  'db', 'cyl', 'external', 'bell', 'box', 'cloud', 'octa', 'ring', 'key', 'tube', 'lock', 'wheel', 'cluster', 'shards',
-  'gear', 'shield', 'hourglass', 'phone', 'pin', 'screen', 'globe', 'stack', 'sphere', 'cone', 'tower', 'funnel', 'film', 'counter',
-];
+export { MODEL_KINDS } from './model-kinds.js';
 
 export function makeModel(kind, color, { own = false } = {}) {
   const g = new THREE.Group();

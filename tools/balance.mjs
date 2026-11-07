@@ -133,7 +133,7 @@ export function report(sc, runs = RUNS, only) {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const list = scArg === 'all' ? SCENARIOS : [byId(scArg)];
+  const list = scArg === 'all' ? SCENARIOS : scArg.endsWith('.js') ? [(await import(new URL(scArg, `file://${process.cwd()}/`).href)).default] : [byId(scArg)];
   if (!list[0]) { console.error(`Unknown scenario "${scArg}". Known: ${SCENARIOS.map((s) => s.id).join(', ')}`); process.exit(1); }
   for (const sc of list) report(sc, RUNS, ONLY);
 }
