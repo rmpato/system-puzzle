@@ -260,6 +260,7 @@ function syncWires() {
 // ── ghost slots
 const ghostLine = new THREE.LineDashedMaterial({ color: '#8a97ab', dashSize: 0.3, gapSize: 0.22 });
 const ghostHot = new THREE.LineDashedMaterial({ color: '#2f6fed', dashSize: 0.3, gapSize: 0.22 });
+const ghostQuiet = new THREE.LineDashedMaterial({ color: '#c3ccd9', dashSize: 0.3, gapSize: 0.22 });
 let hotGhost = null;
 const ghosts = {};
 const playing = () => sim && S.mode !== 'setup' && S.mode !== 'over';
@@ -271,7 +272,7 @@ function syncGhosts() {
     if (s.trap && hotGhost !== s.id) continue;
     const g = new THREE.Group();
     const size = s.ghost || 2.6;
-    const sq = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(size, size)), hotGhost === s.id ? ghostHot : ghostLine);
+    const sq = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(size, size)), hotGhost === s.id ? ghostHot : S.hint[s.id] && !interview() ? ghostLine : ghostQuiet);
     sq.computeLineDistances();
     sq.rotation.x = -Math.PI / 2;
     sq.position.y = 0.04;
@@ -281,7 +282,8 @@ function syncGhosts() {
     hit.userData.buy = s.id;
     g.add(sq, hit);
     g.position.copy(slotFor(s.id, sim.count(s.id)).setY(0));
-    const div = label(g, `<div class="gi"><span>${s.icon}</span>$${sim.price(s.id)}</div>`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (S.hint[s.id] && !interview() ? ' hint' : ''));
+    const hinted = S.hint[s.id] && !interview();
+    const div = label(g, `<div class="gi"><span>${s.icon}</span>${s.name}<br>$${sim.price(s.id)}</div>`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (hinted ? ' hint' : '') + (hotGhost === s.id || hinted ? '' : ' quiet'));
     W.ghosts.add(g);
     ghosts[s.id] = { g, div, hit };
   }
@@ -357,6 +359,7 @@ function floatText(pos, text, bad = false) {
   setTimeout(() => { scene.remove(o); d.remove(); }, 1000);
 }
 let shake = 0, cash = 0, cashAt = null, cashT = 0;
+const fails = {}, failRate = {}; let failT = performance.now(); // requests failing per node, per second
 const topOf = (key) => posOf(key, 0, (W.nodes[key]?.h ?? 2.4) + 1);
 
 // ═════════════════════════════════════════════ sim → visuals
@@ -375,7 +378,7 @@ function hookSim() {
         const o = live.get(p.r.id);
         if (!o) break;
         live.delete(p.r.id);
-        if (!p.ok) failOrb(o.m.position.clone());
+        if (!p.ok) { failOrb(o.m.position.clone()); if (p.where) fails[p.where] = (fails[p.where] || 0) + 1; }
         else if (p.where) ripple(posOf(p.where), colorOf[p.r.type] || '#999');
         freeOrb(o.m);
         break;
@@ -446,6 +449,9 @@ const gaugeColor = (l) => (l > 1 ? '#e5484d' : l > 0.8 ? '#e8930c' : '#1f9d55');
 const gauge = (l) => `<span class="g"><i style="width:${Math.min(100, l * 100)}%;background:${gaugeColor(l)}"></i></span>`;
 function renderLabels() {
   const C = sc.connections;
+  const now = performance.now(), el = Math.max(0.25, (now - failT) / 1000);
+  for (const k of new Set([...Object.keys(fails), ...Object.keys(failRate)])) { failRate[k] = (failRate[k] || 0) * 0.4 + ((fails[k] || 0) / el) * 0.6; fails[k] = 0; }
+  failT = now;
   for (const [id, rec] of Object.entries(W.nodes)) {
     const load = S.nodeLoad[id];
     const isConn = C && sc.pools[C.pool].node === id && sim.connBad();
@@ -458,6 +464,8 @@ function renderLabels() {
       : isConn ? `⚠ ${sim.connections()}/${C.limit} ${C.label || 'connections'}${gauge(sim.connections() / C.limit)}`
       : load === undefined ? rec.node.label
       : `${load > 1 ? '⚠ ' : ''}${name}${gauge(load)}`;
+    const fr = failRate[id] || 0;
+    if (fr >= 0.5) rec.label.innerHTML += `<span class="failing">✕ ${Math.round(fr)}/s failing</span>`;
   }
 }
 
@@ -531,6 +539,14 @@ function frame(now) {
     camera.position.x += (Math.random() - 0.5) * shake * 0.6;
     camera.position.y += (Math.random() - 0.5) * shake * 0.6;
   }
+  if (camTween) {
+    camTween.t = Math.min(1, camTween.t + dt * 2);
+    const k = 1 - Math.pow(1 - camTween.t, 3);
+    controls.target.lerpVectors(camTween.from, camTween.to, k);
+    camera.position.lerpVectors(camTween.fromPos, camTween.toPos, k);
+    if (camTween.t >= 1) camTween = camTween.to === HOME_TARGET ? null : { ...camTween, done: true, t: 1 };
+  }
+  if (focusMark) { const r = focusMark.userData.ring; r.scale.setScalar(1 + Math.sin(t * 5) * 0.08); r.material.opacity = 0.6 + Math.sin(t * 5) * 0.3; }
   controls.autoRotate = !sim || S.mode === 'setup';
   controls.autoRotateSpeed = 0.5;
   controls.update();
@@ -670,8 +686,66 @@ function surgeBanner(p) {
 
 // ═════════════════════════════════════════════ modals
 const modal = $('modal');
-function openModal(html, cls = 'center') { modal.innerHTML = `<div class="card ${cls}">${html}</div>`; modal.hidden = false; }
-function closeModal() { modal.hidden = true; modal.innerHTML = ''; }
+function openModal(html, cls = 'center', docked = false) {
+  modal.innerHTML = `<div class="card ${cls}">${html}</div>`;
+  modal.classList.toggle('docked', docked);
+  modal.hidden = false;
+}
+function closeModal() { modal.hidden = true; modal.innerHTML = ''; modal.classList.remove('docked'); unfocus(); }
+
+// ── incident context: which part of the board is involved, and what is happening there right now
+function focusNode(cardId) {
+  const c = sc.cards[cardId] || {};
+  if (c.focus) return c.focus;
+  const C = sc.connections;
+  if (C && C.card === cardId) return sc.pools[C.pool].node;
+  for (const h of Object.values(sc.hazards || {})) if (h.card === cardId) return h.at || h.node || null;
+  for (const D of Object.values(sc.types)) {
+    if (D.cardOnSeen === cardId || D.cardOnFail === cardId) {
+      const st = D.steps.reduce((a, b) => (b.cost > a.cost ? b : a));
+      return sc.pools[st.pool].node;
+    }
+  }
+  const it = c.fix && sim.item(c.fix);
+  const sym = it && [].concat(it.symptom || []).find((k) => k.startsWith('hot:'));
+  if (sym) return sym.slice(4);
+  return null;
+}
+function liveFact(node) {
+  if (!node || !W.nodes[node]) return '';
+  const rec = W.nodes[node], C = sc.connections;
+  const bits = [];
+  if (S.outage && sc.hazards.outage?.node === node) bits.push(`${rec.node.label} is down`);
+  else if (C && sc.pools[C.pool].node === node && sim.connBad()) bits.push(`${sim.connections()} of ${C.limit} connections used`);
+  else if (S.nodeLoad[node] !== undefined) bits.push(`${rec.node.label} at ${Math.round(S.nodeLoad[node] * 100)}%`);
+  const fr = Math.round(failRate[node] || 0);
+  if (fr) bits.push(`${fr} requests/s failing`);
+  return bits.join(' · ').replace(/<[^>]+>/g, '');
+}
+let focusMark = null, camTween = null;
+function focusOn(node) {
+  unfocus();
+  if (!node || !W.nodes[node]) return;
+  const p = W.nodes[node].pos;
+  focusMark = new THREE.Group();
+  const ringM = new THREE.Mesh(new THREE.RingGeometry(2.4, 2.75, 48), new THREE.MeshBasicMaterial({ color: '#e5484d', transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+  ringM.rotation.x = -Math.PI / 2;
+  ringM.position.y = 0.08;
+  focusMark.add(ringM);
+  focusMark.userData.ring = ringM;
+  label(focusMark, '<div class="here">👇 here</div>', (W.nodes[node].h ?? 2.4) + (node === W.serverNode ? 5.2 : 3.6), 'here-wrap');
+  focusMark.position.copy(p);
+  scene.add(focusMark);
+  // pan so the part sits left of the docked card
+  const offset = camera.position.clone().sub(controls.target);
+  const target = p.clone().add(new THREE.Vector3(5, 0, 2));
+  camTween = { from: controls.target.clone(), to: target, fromPos: camera.position.clone(), toPos: target.clone().add(offset), t: 0 };
+}
+function unfocus() {
+  if (focusMark) { focusMark.traverse((o) => { if (o.isCSS2DObject) o.element.remove(); }); scene.remove(focusMark); focusMark = null; }
+  if (camTween && camTween.to !== HOME_TARGET) camTween = { from: controls.target.clone(), to: HOME_TARGET, fromPos: camera.position.clone(), toPos: HOME.clone(), t: 0 };
+}
+const HOME_TARGET = new THREE.Vector3(0, 0, 1);
 const shuffled = (n) => Array.from({ length: n }, (_, i) => i).sort(() => Math.random() - 0.5);
 const md = (t) => String(t).replace(/`([^`]+)`/g, '<code>$1</code>');
 const cont = (labelText = 'Continue', reward = '') => `<div class="row"><span class="grow">${reward}</span><button class="btn" id="cont">${labelText}</button></div>`;
@@ -692,9 +766,10 @@ function maybeCoach() {
   setTimeout(() => n.remove(), 7200);
 }
 function eyebrow(cur) {
-  if (cur.incident && cur.id === sc.startCard) return '<div class="eyebrow">Interviewer asks</div>';
-  if (cur.incident) return `<div class="eyebrow danger">Incident${S.queue.length > 1 ? ` · 1 of ${S.queue.length}` : ''}</div>`;
-  return `<div class="eyebrow">${cur.closing ? 'Closing questions' : 'Whiteboard'} · ${cur.step}/${cur.total}</div>`;
+  if (cur.incident && cur.id === sc.startCard) return '<div class="mode-strip ask">💬 The interviewer asks · game paused</div>';
+  if (cur.incident) return `<div class="mode-strip live">🚨 Live incident · game paused${S.queue.length > 1 ? ` · 1 of ${S.queue.length}` : ''}</div>`;
+  if (cur.closing) return `<div class="mode-strip board">🎯 Closing question ${cur.step} of ${cur.total} · traffic stopped</div>`;
+  return `<div class="mode-strip board">✏️ Whiteboard break ${cur.step} of ${cur.total} · traffic paused</div>`;
 }
 function showCurrent() {
   const cur = sim.current();
@@ -706,13 +781,19 @@ function showCurrent() {
 function showCard(cur) {
   const c = cur.data;
   const order = shuffled(c.opts.length);
+  const live = cur.incident && cur.id !== sc.startCard;
+  const node = live ? focusNode(cur.id) : null;
+  const fact = live ? liveFact(node) : '';
   openModal(`
     ${eyebrow(cur)}
     <div class="big-ic">${c.icon}</div>
     <h2>${md(c.title)}</h2>
     <p class="sub">${md(c.text)}</p>
+    ${fact ? `<div class="fact">📍 ${fact}</div>` : ''}
+    ${live ? '<div class="pick-hint">What do you do?</div>' : ''}
     <div class="opts">${order.map((i) => `<button class="opt" data-i="${i}">${md(c.opts[i].t)}</button>`).join('')}</div>
-  `);
+  `, live ? 'docked-card' : 'center', live);
+  if (live) focusOn(node);
   modal.querySelectorAll('.opt').forEach((b) => b.addEventListener('click', () => {
     const i = +b.dataset.i;
     const res = sim.answerCard(cur.id, i);
@@ -864,11 +945,12 @@ function briefScreen() {
     <div class="eyebrow">${sc.icon} ${sc.difficulty} · ${interview() ? 'Interview mode' : 'Practice mode'} · ~${Math.round((sc.phases.reduce((a, p) => a + p.dur, 0) + 240) / 60)} min</div>
     <h1>${sc.title}</h1>
     <div class="brief hand">${sc.brief}</div>
-    <div class="steps">
-      <div><span>🤔</span>Ask</div>
-      <div><span>🛒</span>Build</div>
-      <div><span>🔥</span>Fix</div>
-      <div><span>✏️</span>Whiteboard</div>
+    <h3 class="howto-title">How to read the board</h3>
+    <div class="howto">
+      <div><span class="dotrow"><i style="background:#2f6fed"></i><i style="background:#1f9d55"></i><i style="background:#e8930c"></i></span><b>Dots are requests</b>flowing from users through your parts</div>
+      <div><span class="dotrow"><i style="background:#e5484d"></i></span><b>Red dot</b>a request that failed</div>
+      <div><span class="tagdemo">⚠ Postgres</span><b>Red label</b>that part is overloaded</div>
+      <div><span class="slotdemo"></span><b>Dashed square</b>where a part you can buy goes</div>
     </div>
     <div class="legend wide">${legendHtml}</div>
     <div class="row"><span class="grow"><button class="link" id="back">← All exercises</button></span><button class="btn" id="go">Start interview</button></div>
