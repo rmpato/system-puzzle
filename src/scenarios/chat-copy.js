@@ -88,11 +88,11 @@ export const CARDS = {
 export const PUZZLES = {
   flow: {
     kind: 'order', icon: '🧭', title: 'Send a message', text: 'Tap the steps in order.',
-    items: ['Client sends with message ID', 'Gateway forwards over socket', 'Store with next seq', 'Ack sender: sent ✓', 'Fan out to recipients', 'Recipient acks: delivered ✓✓'],
+    items: ['Client sends with message ID', 'Gateway forwards to chat service', 'Store with next seq', 'Ack sender: sent ✓', 'Fan out to recipients', 'Recipient acks: delivered ✓✓'],
     signal: 'Walked the send path end to end', flag: 'Shaky on the message send flow',
   },
   schema: {
-    kind: 'pick', icon: '📝', title: 'Message row', text: 'Pick the 4 fields to store.', pick: 4,
+    kind: 'pick', icon: '📝', title: 'Message row', text: 'Pick 4 fields to store besides the body.', pick: 4,
     items: [
       { t: 'conversation_id', good: true },
       { t: 'seq', good: true },

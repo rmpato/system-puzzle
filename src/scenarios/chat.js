@@ -36,7 +36,7 @@ export default {
     { id: 'queue', icon: '📬', name: 'Queue', cost: 200, desc: 'Async fan-out · survives outages', model: 'tube', color: '#dbe2ec', pos: [6, 10], label: 'Queue', symptom: ['outage', 'type:group'], proactive: 2 },
     { id: 'seq', icon: '🔢', name: 'Seq numbers', cost: 120, desc: 'Ordered per conversation', model: 'counter', color: '#cfd6e2', pos: [8.5, 4.6], label: 'Seq per chat', symptom: 'hazard:race', proactive: 2 },
     { id: 'acks', icon: '✅', name: 'Acks + retry', cost: 130, desc: 'At-least-once delivery', model: 'shield', color: '#c7e8ff', pos: [16, -6.5], label: 'Acks', symptom: 'hazard:timeout', proactive: 2 },
-    { id: 'ownpush', icon: '📶', name: 'Own push', cost: 240, upkeep: 3, trap: true, desc: 'Skip APNs · costs $3/s', model: 'tower', pos: [0, 10.5], label: 'Own push' },
+    { id: 'ownpush', icon: '📶', name: 'Own push', cost: 240, upkeep: 3, trap: true, desc: 'Homemade push · costs $3/s', model: 'tower', pos: [0, 10.5], label: 'Own push' },
     { id: 'micro', icon: '🧩', name: 'Microservices', cost: 300, upkeep: 2, trap: true, desc: '+capacity · costs $2/s', model: 'cluster', pos: [-3, 5.6], ghost: 4.6, label: '9 services' },
     { id: 'multi', icon: '🌍', name: 'Multi-region', cost: 400, upkeep: 4, trap: true, desc: 'Active-active · costs $4/s', model: 'globe', color: '#bfe3ff', pos: [9.5, -7.5], label: '3 regions' },
   ],

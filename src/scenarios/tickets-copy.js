@@ -62,12 +62,12 @@ export const CARDS = {
   autoscale: { icon: '🧮', title: 'Waiting room or autoscaling?', text: 'The spike lasts one minute.', opts: [
     o('Waiting room sized to DB capacity', true, 'The DB is the real limit.'),
     o('Autoscaling alone', false, 'New servers arrive too late.'),
-    o('Both off, buy a bigger DB', false, 'Still one hot table.')] },
+    o('Neither: just buy a bigger DB', false, 'Still one hot table.')] },
   ttl: { icon: '⏱️', title: 'How long is a hold?', text: 'Fan picked seats, now paying.', opts: [
     o('About 5-10 min, then auto-release', true, 'Enough to pay, not to hoard.'),
     o('One hour', false, 'Bots hoard, fans see sold out.'),
     o('No expiry', false, 'Abandoned seats never return.')] },
-  expire: { icon: '⌛', title: 'Hold expired mid-payment', text: 'Payment lands after release.', opts: [
+  expire: { icon: '⌛', title: 'Hold expired mid-payment', text: 'Payment lands after the seat was resold.', opts: [
     o('Seat freed; late payment auto-refunded', true, 'Never sell one seat twice.'),
     o('Give both fans the seat', false, 'Two people, one chair.'),
     o('Never expire holds', false, 'Abandoned carts block sales.')] },

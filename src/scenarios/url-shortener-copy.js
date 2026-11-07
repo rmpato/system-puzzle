@@ -32,7 +32,7 @@ export const CARDS = {
     o('Shard by code now', false, 'Big complexity for a read problem.'),
     o('Bigger primary, forever', false, 'Vertical scaling has a ceiling.')] },
   viral: { icon: '🚀', title: 'A link went viral', text: 'Millions of clicks on one code.', fix: 'cdn', opts: [
-    o('Serve hot redirects at the CDN edge', true, 'Edge answers, origin rests.'),
+    o('Cache the redirect at the CDN, short TTL', true, 'Edge serves it; edge logs count clicks.'),
     o('Add API servers', false, 'Paying compute for one key.'),
     o('Rate limit that link', false, 'Blocks real visitors.')] },
   spam: { icon: '🤖', title: 'Bots mass-create links', text: 'Spam from a few keys and IPs.', fix: 'ratelimit', opts: [
@@ -86,7 +86,7 @@ export const CARDS = {
 export const PUZZLES = {
   flow: {
     kind: 'order', icon: '🧭', title: 'Redirect path', text: 'Tap the redirect steps in order.',
-    items: ['GET /aZ3kQ9x', 'Look up code in Redis', 'On miss, read Postgres', 'Fill the cache', 'Return 302 + Location', 'Publish click event'],
+    items: ['GET /aZ3kQ9x', 'Look up code in Redis', 'On miss, read Postgres', 'Fill the cache', 'Return 302 + Location', 'Consumer records the click'],
     signal: 'Walked the redirect path end to end', flag: 'Shaky on the redirect flow',
   },
   fields: {

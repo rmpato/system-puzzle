@@ -84,7 +84,7 @@ export const CARDS = {
 export const PUZZLES = {
   lifecycle: {
     kind: 'order', icon: '🧭', title: 'Trip lifecycle', text: 'Tap the steps in order.',
-    items: ['Rider requests a ride', 'Find nearby drivers by cell', 'Driver accepts (atomic assign)', 'Pickup', 'Trip in progress', 'Charge with idempotency key', 'Send receipt'],
+    items: ['Rider requests a ride', 'Find nearby drivers by cell', 'Driver accepts (atomic assign)', 'Driver picks up rider', 'Drop off at destination', 'Charge with idempotency key', 'Send receipt'],
     signal: 'Walked the trip lifecycle end to end', flag: 'Shaky on the trip lifecycle',
   },
   ping: {

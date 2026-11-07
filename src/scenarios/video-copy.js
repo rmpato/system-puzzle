@@ -100,10 +100,10 @@ export const PUZZLES = {
     kind: 'sort', icon: '🗃️', title: 'Where does it live?', text: 'Pick the right store.',
     buckets: ['🌐 CDN', '🪣 Object store', '🐘 Postgres', '🧺 Redis'],
     items: [
-      { t: 'Video segments being watched', a: 0 },
-      { t: 'Thumbnails', a: 0 },
+      { t: 'Hot segments viewers stream', a: 0 },
+      { t: 'Thumbnails sent to viewers', a: 0 },
       { t: 'Original uploaded file', a: 1 },
-      { t: 'Master renditions', a: 1, why: 'CDN pulls from the origin' },
+      { t: 'All transcoded renditions', a: 1, why: 'The origin the CDN pulls from' },
       { t: 'Title, owner, status', a: 2 },
       { t: 'Comments', a: 2 },
       { t: 'Live view counter', a: 3, why: 'Hot increments, flushed later' },

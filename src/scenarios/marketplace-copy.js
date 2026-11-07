@@ -55,7 +55,7 @@ export const CARDS = {
   race: { icon: '🏁', title: 'Last item, two buyers', text: 'Same millisecond.', fix: 'lock', opts: [
     o('Atomic decrement / row lock', true, 'The DB enforces stock ≥ 0.'),
     o('Check stock, then decrement', false, 'Both read 1. Both win.'),
-    o('Cache stock in Redis', false, 'Still races.')] },
+    o('Check a cached stock count first', false, 'Stale count, still oversells.')] },
   // whiteboard cards
   mock: { icon: '🧪', title: 'Frontend needs /checkout', text: 'It isn\'t built yet.', opts: [
     o('Agree the contract, share a mock', true, 'Both teams build in parallel.'),
@@ -70,7 +70,7 @@ export const CARDS = {
     o('Rename it today', false, 'Typed clients break on old versions.'),
     o('Force everyone to update', false, 'Users churn first.')] },
   split: { icon: '✂️', title: 'Ready to split the monolith?', text: 'Teams step on each other in one module.', opts: [
-    o('Extract along a domain boundary, behind its API', true, 'Boundaries follow teams, not tables.'),
+    o('Extract one domain behind its API', true, 'Boundaries follow teams, not tables.'),
     o('Split every table into a service', false, 'Chatty, distributed joins.'),
     o('Rewrite everything as services', false, 'Big-bang rewrites stall.')] },
   cart: { icon: '🛒', title: 'Where does the cart live?', text: 'Users switch devices.', opts: [

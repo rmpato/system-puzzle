@@ -104,7 +104,7 @@ export default {
       { counter: 'race', min: 1, flag: 'Oversold the last item {n}×' },
     ],
     scaleFirst: { item: 'instance', fixes: [['type:image', 'cdn'], ['type:search', 'search']], flag: 'Added servers instead of fixing expensive paths', signal: 'Fixed expensive paths before scaling out' },
-    noTraps: 'No premature Kafka / Kubernetes / sharding',
+    noTraps: 'No premature Kubernetes / microservices / sharding',
   },
 
   followups: [
