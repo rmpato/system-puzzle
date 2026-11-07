@@ -4,6 +4,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { createSim } from './engine/sim.js';
 import { makeModel, INK } from './engine/models.js';
 import { SCENARIOS, byId } from './scenarios/index.js';
+import { gcpOf, iconHtml, CATS, PRODUCTS } from './gcp.js';
 
 const $ = (id) => document.getElementById(id);
 const FAIL_COLOR = '#e5484d';
@@ -69,14 +70,15 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(PAPER);
 scene.fog = new THREE.Fog(PAPER, 50, 95);
 const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
-const HOME = new THREE.Vector3(0, 25, 26);
+const HOME = new THREE.Vector3(0, 25, 28.5);
+const HOME_TARGET = new THREE.Vector3(0, 0, 3.5);
 camera.position.copy(HOME);
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.maxPolarAngle = 1.25;
 controls.minDistance = 12;
 controls.maxDistance = 60;
-controls.target.set(0, 0, 1);
+controls.target.copy(HOME_TARGET);
 
 scene.add(new THREE.HemisphereLight('#ffffff', '#c7cfdb', 2.2));
 const sun = new THREE.DirectionalLight('#ffffff', 1.6);
@@ -135,6 +137,10 @@ let sc = null, sim = null, S = null;
 const world = new THREE.Group();
 scene.add(world);
 const W = { nodes: {}, items: {}, crowd: [], servers: null, serverNode: null, wires: new THREE.Group(), ghosts: new THREE.Group(), spinners: [] };
+const ico = (key, obj = {}, cls = 'gx') => iconHtml(sc, key, obj, cls);
+const plain = (t) => String(t).replace(/<[^>]+>/g, '').trim();
+const tag = (key, obj, text, extra = '') => `<span class="t">${ico(key, obj)}<span>${text}</span></span>${extra}`;
+let shopOrder = [];
 world.add(W.wires, W.ghosts);
 let colorOf = {};
 
@@ -144,9 +150,12 @@ function buildWorld(scenario) {
   S = sim.S;
   colorOf = { ...Object.fromEntries(Object.entries(sc.types).map(([k, t]) => [k, t.color])), ...Object.fromEntries(Object.entries(sc.events || {}).map(([k, t]) => [k, t.color])) };
   orbMats = Object.fromEntries(Object.entries(colorOf).map(([k, c]) => [k, new THREE.MeshBasicMaterial({ color: c })]));
+  shopOrder = CATS.flatMap(([c]) => sc.shop.filter((s) => gcpOf(sc, s.id, s).cat === c));
+  for (const s of sc.shop) if (!shopOrder.includes(s)) shopOrder.push(s);
   for (const n of sc.nodes) {
     const g = new THREE.Group();
     g.position.copy(v3(n.pos));
+    g.userData.inspect = n.id;
     const rec = { group: g, node: n, pos: v3(n.pos), h: 2.5 };
     if (n.model === 'users') {
       g.add(makeModel('platform', '#ffffff').group);
@@ -161,17 +170,18 @@ function buildWorld(scenario) {
       }
       rec.h = 2.2;
       rec.label = label(g, n.label, rec.h);
+      g.userData.inspect = null;
     } else if (n.model === 'servers') {
       W.servers = { node: n, group: g, boxes: [], anchor: new THREE.Object3D() };
       g.add(W.servers.anchor);
-      rec.label = label(W.servers.anchor, n.label, 0);
+      rec.label = label(W.servers.anchor, tag(n.id, n, n.label), 0);
       W.serverNode = n.id;
     } else {
       const m = makeModel(n.model, n.color, { own: true });
       g.add(m.group);
       rec.mesh = m.mesh;
       rec.h = m.h + 0.9;
-      rec.label = label(g, n.label, rec.h);
+      rec.label = label(g, tag(n.id, n, n.label), rec.h, 'lbl' + (n.model === 'external' ? ' ext' : ''));
     }
     world.add(g);
     W.nodes[n.id] = rec;
@@ -283,7 +293,7 @@ function syncGhosts() {
     g.add(sq, hit);
     g.position.copy(slotFor(s.id, sim.count(s.id)).setY(0));
     const hinted = S.hint[s.id] && !interview();
-    const div = label(g, `<div class="gi"><span>${s.icon}</span>${s.name}<br>$${sim.price(s.id)}</div>`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (hinted ? ' hint' : '') + (hotGhost === s.id || hinted ? '' : ' quiet'));
+    const div = label(g, `<div class="gi">${ico(s.id, s, 'gx big')}${s.name}<br>$${sim.price(s.id)}</div>`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (hinted ? ' hint' : '') + (hotGhost === s.id || hinted ? '' : ' quiet'));
     W.ghosts.add(g);
     ghosts[s.id] = { g, div, hit };
   }
@@ -389,7 +399,7 @@ function hookSim() {
       case 'blocked': ripple(posOf(p.at), '#e8930c'); floatText(topOf(p.at), p.text); break;
       case 'outage': if (!p.on && p.delivered) floatText(topOf(sc.hazards.outage.event?.via || p.node), `📬 ${p.delivered} delivered`); break;
       case 'buy': onBuy(p.id, p.n); break;
-      case 'meter': renderLabels(); renderHud(); renderShop(); break;
+      case 'meter': renderLabels(); renderHud(); renderShop(); renderInspector(); break;
       case 'incident': case 'break': showCurrent(); break;
       case 'phase': phaseBanner(); break;
       case 'surge': if (p.on) surgeBanner(p); renderHud(); break;
@@ -401,7 +411,7 @@ function hookSim() {
 function snapshot(name) {
   const saved = { pos: camera.position.clone(), target: controls.target.clone() };
   camera.position.copy(HOME);
-  controls.target.set(0, 0, 1);
+  controls.target.copy(HOME_TARGET);
   camera.lookAt(controls.target);
   W.ghosts.visible = false;
   renderer.render(scene, camera);
@@ -429,7 +439,8 @@ function onBuy(id, n) {
     const g = new THREE.Group();
     g.add(m.group);
     g.position.copy(pos.clone().setY(0));
-    if (it.label) label(g, it.label, m.h + 0.5);
+    if (it.label) label(g, tag(id, it, it.label), m.h + 0.5);
+    g.userData.inspect = id;
     pop(g);
     world.add(g);
     if (m.spin) W.spinners.push(m.spin);
@@ -437,11 +448,25 @@ function onBuy(id, n) {
   }
   ripple(pos, '#2f6fed');
   sfx('build');
+  toast(`${ico(id, it, 'gx')}<span><b>${it.name}</b> ${it.trap ? 'adopted' : 'deployed'}${gcpOf(sc, id, it).name ? `<small>${gcpOf(sc, id, it).name}</small>` : ''}</span>`);
   syncWires();
   syncGhosts();
   shopSig = '';
   renderShop();
   renderHud();
+}
+
+const toasts = document.createElement('div');
+toasts.id = 'toasts';
+document.body.appendChild(toasts);
+function toast(html) {
+  const t = document.createElement('div');
+  t.className = 'toast note';
+  t.innerHTML = html;
+  toasts.appendChild(t);
+  while (toasts.children.length > 3) toasts.firstChild.remove();
+  setTimeout(() => t.classList.add('out'), 2200);
+  setTimeout(() => t.remove(), 2700);
 }
 
 // ═════════════════════════════════════════════ frame loop
@@ -459,11 +484,12 @@ function renderLabels() {
     if (load === undefined && !down && !rec.wasDown) continue;
     rec.wasDown = down;
     const name = rec.node.label + (id === W.serverNode ? ` ×${serverCount()}` : '');
-    rec.label.className = 'lbl' + (load > 1 || isConn || down ? ' warn' : '');
-    rec.label.innerHTML = down ? `⚠ ${rec.node.label}: down${S.queued ? ` · 📬 ${S.queued}` : ''}`
-      : isConn ? `⚠ ${sim.connections()}/${C.limit} ${C.label || 'connections'}${gauge(sim.connections() / C.limit)}`
-      : load === undefined ? rec.node.label
-      : `${load > 1 ? '⚠ ' : ''}${name}${gauge(load)}`;
+    rec.label.className = 'lbl' + (load > 1 || isConn || down ? ' warn' : '') + (rec.node.model === 'external' ? ' ext' : '');
+    const n = rec.node;
+    rec.label.innerHTML = down ? tag(id, n, `${n.label}: down${S.queued ? ` · 📬 ${S.queued}` : ''}`)
+      : isConn ? tag(id, n, `${sim.connections()}/${C.limit} ${C.label || 'connections'}`, gauge(sim.connections() / C.limit))
+      : load === undefined ? tag(id, n, n.label)
+      : tag(id, n, name, gauge(load));
     const fr = failRate[id] || 0;
     if (fr >= 0.5) rec.label.innerHTML += `<span class="failing">✕ ${Math.round(fr)}/s failing</span>`;
   }
@@ -569,7 +595,8 @@ function renderHud() {
   const P = sc.phases[S.phase];
   const r = Math.round(S.moneyRate);
   hud.innerHTML = `
-    <div class="note stat" id="phase"><small>${sc.icon} ${sc.title} · ${S.phase + 1}/${sc.phases.length}</small><b>${P.name}${S.surging ? ' <span class="surge">📈 surge</span>' : ''}</b><div class="bar"><i style="width:${Math.min(100, (S.phaseTime / P.dur) * 100)}%"></i></div></div>
+    <div class="note stat" id="phase"><small>${sc.icon} ${sc.title} · phase ${S.phase + 1} of ${sc.phases.length}</small><b>${P.name}${S.surging ? ' <span class="surge">📈 surge</span>' : ''}</b>
+      <div class="phases">${sc.phases.map((p, i) => `<i class="${i < S.phase ? 'done' : i === S.phase ? 'now' : ''}" style="flex:${p.dur}" title="${p.name}"><b style="width:${i < S.phase ? 100 : i === S.phase ? Math.min(100, (S.phaseTime / p.dur) * 100) : 0}%"></b>${p.surge ? `<em style="left:${(p.surge.at / p.dur) * 100}%" title="${p.surge.label || 'Surge'}">⚡</em>` : ''}</i>`).join('')}</div></div>
     <div class="note stat"><small>Budget</small><b style="color:${S.money < 0 ? 'var(--bad)' : 'var(--ink)'}">$${Math.floor(S.money)}</b>${r ? `<span class="rate ${r > 0 ? 'up' : 'down'}">${r > 0 ? '+' : ''}${r}/s</span>` : ''}</div>
     <div class="note stat ${S.rep < 35 ? 'low' : ''}" id="rep"><small>Reputation</small><b>${Math.round(S.rep)}</b><div class="bar"><i style="width:${Math.max(0, S.rep)}%"></i></div></div>
     <div class="spacer"></div>
@@ -594,7 +621,7 @@ function togglePause() {
 addEventListener('keydown', (e) => {
   if (e.code === 'Space' && $('modal').hidden) { e.preventDefault(); togglePause(); }
   if (e.key === 'm' || e.key === 'M') toggleMute();
-  if (playing() && $('modal').hidden && /^[1-9]$/.test(e.key)) { const s = sc.shop[+e.key - 1]; if (s) buy(s.id); }
+  if (playing() && $('modal').hidden && /^[1-9]$/.test(e.key)) { const s = shopOrder[+e.key - 1]; if (s) buy(s.id); }
 });
 
 let shopSig = '';
@@ -602,17 +629,24 @@ function renderShop() {
   const shop = $('shop');
   shop.hidden = !playing();
   if (!playing()) return;
-  const sig = sc.shop.map((s) => [sim.count(s.id), sim.price(s.id), sim.affordable(s.id), sim.onCredit(s.id), waitFor(s.id), !!S.hint[s.id]].join()).join('|');
+  const pct = (s) => Math.max(0, Math.min(100, Math.round((S.money / sim.price(s.id)) * 20) * 5));
+  const sig = sc.shop.map((s) => [sim.count(s.id), sim.price(s.id), sim.affordable(s.id), sim.onCredit(s.id), waitFor(s.id), pct(s), !!S.hint[s.id]].join()).join('|');
   if (sig === shopSig) return;
   shopSig = sig;
-  shop.innerHTML = sc.shop.map((s, i) => {
+  const tile = (s) => {
+    const i = shopOrder.indexOf(s);
     const n = sim.count(s.id), max = s.max || 1, price = sim.price(s.id);
     const done = n >= max, poor = !done && !sim.affordable(s.id), credit = !done && sim.onCredit(s.id), wait = poor ? waitFor(s.id) : 0;
-    return `<button class="item ${s.trap ? 'trap' : ''} ${done ? 'done' : ''} ${poor ? 'poor' : ''} ${credit ? 'credit' : ''} ${S.hint[s.id] && !done && !interview() ? 'hint' : ''}" data-id="${s.id}" ${done || poor ? 'disabled' : ''} aria-label="${s.name}, $${price}">
-      ${i < 9 ? `<span class="k">${i + 1}</span>` : ''}<span class="ic">${s.icon}</span>${max > 1 && n ? `<span class="n">${n}</span>` : ''}
+    return `<button class="item ${s.trap ? 'trap' : ''} ${done ? 'done' : ''} ${poor ? 'poor' : ''} ${credit ? 'credit' : ''} ${S.hint[s.id] && !done && !interview() ? 'hint' : ''}" data-id="${s.id}" aria-disabled="${done || poor}" aria-label="${s.name}, $${price}">
+      ${i < 9 ? `<span class="k">${i + 1}</span>` : ''}<span class="ic">${ico(s.id, s, 'gx')}</span>${max > 1 && n ? `<span class="n">×${n}</span>` : ''}
       <b>${s.name}</b>
-      <span class="p">${done ? '✓' : credit ? `💳 $${price}` : `$${price}`}${wait ? `<i class="wait">⏱ ${wait}s</i>` : ''}</span>
+      <span class="p">${done ? '✓ built' : credit ? `💳 $${price}` : `$${price}`}</span>${wait ? `<i class="wait">⏱ ${wait}s</i>` : ''}
+      ${poor ? `<span class="fill"><i style="width:${pct(s)}%"></i></span>` : ''}
     </button>`;
+  };
+  shop.innerHTML = CATS.map(([c, name]) => {
+    const list = shopOrder.filter((s) => gcpOf(sc, s.id, s).cat === c);
+    return list.length ? `<div class="grp"><div class="grp-l">${name}</div><div class="grp-i">${list.map(tile).join('')}</div></div>` : '';
   }).join('');
   syncGhosts();
 }
@@ -625,16 +659,17 @@ function waitFor(id) {
   return t <= 60 ? t : 0;
 }
 const shopEl = $('shop');
-shopEl.addEventListener('click', (e) => { const b = e.target.closest('.item'); if (b && !b.disabled) buy(b.dataset.id); });
+shopEl.addEventListener('click', (e) => { const b = e.target.closest('.item'); if (b && b.getAttribute('aria-disabled') !== 'true') buy(b.dataset.id); });
 shopEl.addEventListener('pointerover', (e) => {
   const b = e.target.closest('.item');
   if (!b) return;
   const s = sim.item(b.dataset.id);
   const tip = $('tip');
-  tip.textContent = sim.onCredit(s.id) ? `${s.desc} · 💳 you named this fix: buy now on credit` : s.desc;
+  const g = gcpOf(sc, s.id, s);
+  tip.innerHTML = `<div class="tip-h">${ico(s.id, s, 'gx')}<span><b>${s.name}</b><small>${g.name || 'Design pattern'}</small></span></div>${s.desc}${s.upkeep ? `<div class="tip-up">Upkeep $${s.upkeep}/s</div>` : ''}${sim.onCredit(s.id) ? '<div class="tip-cr">💳 You named this fix: buy now on credit</div>' : ''}`;
   tip.hidden = false;
   const r = b.getBoundingClientRect();
-  tip.style.left = Math.max(12, Math.min(innerWidth - 252, r.left)) + 'px';
+  tip.style.left = Math.max(12, Math.min(innerWidth - 272, r.left - 20)) + 'px';
   tip.style.bottom = innerHeight - r.top + 10 + 'px';
   setHotGhost(s.id);
 });
@@ -650,8 +685,70 @@ canvas.addEventListener('pointerdown', (e) => (downAt = [e.clientX, e.clientY]))
 canvas.addEventListener('pointerup', (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 6) return;
   const hit = pickGhost(e);
-  if (hit) buy(hit);
+  if (hit) { closeInspector(); return buy(hit); }
+  const part = pickPart(e);
+  if (part) openInspector(part, e.clientX, e.clientY);
+  else closeInspector();
 });
+// ── inspector: click any part on the board to see what it is (GCP product), what it does, and how it is coping
+function pickPart(e) {
+  if (!playing()) return null;
+  ptr.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  const groups = [...Object.values(W.nodes).map((r) => r.group), ...Object.values(W.items).flat().map((x) => x.group)];
+  for (const h of ray.intersectObjects(groups, true)) {
+    let o = h.object;
+    while (o && o.userData.inspect === undefined) o = o.parent;
+    if (o?.userData.inspect) return o.userData.inspect;
+  }
+  return null;
+}
+let inspecting = null;
+const insp = document.createElement('div');
+insp.id = 'insp'; insp.className = 'note'; insp.hidden = true;
+document.body.appendChild(insp);
+function openInspector(key, x, y) {
+  inspecting = key;
+  renderInspector();
+  insp.hidden = false;
+  const r = insp.getBoundingClientRect();
+  insp.style.left = Math.max(12, Math.min(innerWidth - r.width - 12, x + 16)) + 'px';
+  insp.style.top = Math.max(70, Math.min(innerHeight - r.height - 130, y - r.height / 2)) + 'px';
+  sfx('tick');
+}
+function closeInspector() { inspecting = null; insp.hidden = true; }
+function renderInspector() {
+  if (!inspecting) return;
+  const key = inspecting, node = W.nodes[key]?.node, it = !node && sim.item(key);
+  const obj = node || it, g = gcpOf(sc, key, obj);
+  const title = plain(node ? node.label : it.label || it.name);
+  const rows = [];
+  if (node) {
+    const load = S.nodeLoad[key];
+    const down = S.outage && sc.hazards.outage?.node === key;
+    if (down) rows.push(['Status', '<b class="bad">Down</b>']);
+    if (load !== undefined) {
+      rows.push(['Load', `<b class="${load > 1 ? 'bad' : load > 0.8 ? 'warn' : 'ok'}">${Math.round(load * 100)}%</b>${gauge(load)}`]);
+      rows.push(['Capacity', `${Math.round(sim.nodeCap(key))} units/s`]);
+    }
+    if (key === W.serverNode) rows.push(['Instances', `×${serverCount()}`]);
+    const C = sc.connections;
+    if (C && sc.pools[C.pool].node === key) rows.push(['Connections', `<b class="${sim.connBad() ? 'bad' : 'ok'}">${sim.connections()} / ${C.limit}</b>`]);
+    const fr = Math.round(failRate[key] || 0);
+    if (fr) rows.push(['Failing', `<b class="bad">${fr} req/s</b>`]);
+    if (node.model === 'external') rows.push(['Owner', 'Third party (not yours)']);
+  } else {
+    if ((it.max || 1) > 1) rows.push(['Built', `×${sim.count(key)}`]);
+    if (it.upkeep) rows.push(['Upkeep', `<b class="warn">$${it.upkeep * sim.count(key)}/s</b>`]);
+  }
+  insp.innerHTML = `
+    <button class="insp-x" aria-label="Close">×</button>
+    <div class="insp-h">${ico(key, obj, 'gx lg')}<div><b>${title}</b><small>${g.name ? `Google Cloud · ${g.name}` : node?.model === 'external' ? 'External service' : node?.model === 'users' ? 'Clients' : 'Design pattern'}</small></div></div>
+    ${it?.desc ? `<p>${it.desc}</p>` : ''}
+    ${rows.length ? `<dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}`;
+  insp.querySelector('.insp-x').addEventListener('click', closeInspector);
+}
+addEventListener('keydown', (e) => { if (e.key === 'Escape') closeInspector(); });
 canvas.addEventListener('pointermove', (e) => {
   if (e.buttons) return;
   const hit = pickGhost(e);
@@ -695,6 +792,7 @@ function surgeBanner(p) {
 // ═════════════════════════════════════════════ modals
 const modal = $('modal');
 function openModal(html, cls = 'center', docked = false) {
+  closeInspector();
   modal.innerHTML = `<div class="card ${cls}">${html}</div>`;
   modal.classList.toggle('docked', docked);
   modal.hidden = false;
@@ -753,7 +851,7 @@ function unfocus() {
   if (focusMark) { focusMark.traverse((o) => { if (o.isCSS2DObject) o.element.remove(); }); scene.remove(focusMark); focusMark = null; }
   if (camTween && camTween.to !== HOME_TARGET) camTween = { from: controls.target.clone(), to: HOME_TARGET, fromPos: camera.position.clone(), toPos: HOME.clone(), t: 0 };
 }
-const HOME_TARGET = new THREE.Vector3(0, 0, 1);
+
 const shuffled = (n) => Array.from({ length: n }, (_, i) => i).sort(() => Math.random() - 0.5);
 const md = (t) => String(t).replace(/`([^`]+)`/g, '<code>$1</code>');
 const cont = (labelText = 'Continue', reward = '') => `<div class="row"><span class="grow">${reward}</span><button class="btn" id="cont">${labelText}</button></div>`;
@@ -821,7 +919,7 @@ function showCard(cur) {
       if (j === i || j === res.best) x.insertAdjacentHTML('beforeend', `<small>${md(c.opts[j].why)}</small>`);
     });
     const fix = res.fix && sim.item(res.fix);
-    const reward = `<span class="delta ${res.good ? 'up' : 'down'}">${res.good ? `+$${sim.T.cardReward}` : `−${sim.T.cardPenalty} rep`}</span>${fix ? ` <span class="fix">→ ${fix.icon} ${fix.name}${res.good ? ` −${Math.round((1 - sim.T.discount) * 100)}% · 💳 even if short` : ''}</span>` : ''}`;
+    const reward = `<span class="delta ${res.good ? 'up' : 'down'}">${res.good ? `+$${sim.T.cardReward}` : `−${sim.T.cardPenalty} rep`}</span>${fix ? ` <span class="fix">→ ${ico(fix.id, fix, 'gx sm')} ${fix.name}${res.good ? ` −${Math.round((1 - sim.T.discount) * 100)}% · 💳 even if short` : ''}</span>` : ''}`;
     modal.querySelector('.card').insertAdjacentHTML('beforeend', cont(cur.closing && cur.step === cur.total ? 'Results' : 'Continue', reward));
     bindCont();
   }));
@@ -929,10 +1027,11 @@ function pickerScreen() {
       <button class="scn" data-id="${s.id}">
         <span class="scn-ic">${s.icon}</span>
         <span class="scn-body"><b>${s.title}</b><span>${s.pitch}</span>
-          <span class="tags">${(s.topics || []).slice(0, 2).map((t) => `<i>${t}</i>`).join('')}</span></span>
+          <span class="tags">${(s.topics || []).slice(0, 2).map((t) => `<i>${t}</i>`).join('')}</span>
+          <span class="stack-ic" title="Google Cloud products in this exercise">${[...new Set(s.nodes.concat(s.shop.filter((x) => !x.trap)).map((o) => gcpOf(s, o.id, o).product).filter(Boolean))].slice(0, 7).map((p) => `<img src="./assets/gcp/${p}.svg" alt="" title="${PRODUCTS[p]}">`).join('')}</span></span>
         <span class="scn-meta"><em class="diff ${String(s.difficulty).toLowerCase()}">${s.difficulty}</em>${best[s.id] ? `<strong class="grade-sm ${best[s.id]}" title="Best grade">${best[s.id]}</strong>` : ''}</span>
       </button>`).join('')}</div>
-    <div class="keys"><kbd>Space</kbd> pause · <kbd>M</kbd> mute · <kbd>1</kbd>–<kbd>9</kbd> buy · drag to look around</div>
+    <div class="keys"><kbd>Space</kbd> pause · <kbd>M</kbd> mute · <kbd>1</kbd>–<kbd>9</kbd> buy · click a part to inspect · drag to look around</div>
   `, 'wide picker-card');
   modal.querySelectorAll('.mode').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode; store.set('sp-mode', mode); sfx('tick'); pickerScreen(); }));
   modal.querySelectorAll('.scn').forEach((b) => b.addEventListener('click', () => {
@@ -961,6 +1060,7 @@ function briefScreen() {
       <div><span class="slotdemo"></span><b>Dashed square</b>where a part you can buy goes</div>
     </div>
     <div class="legend wide">${legendHtml}</div>
+    <p class="inspect-hint">🔎 Click any part on the board to see its Google Cloud product, load and capacity.</p>
     <div class="row"><span class="grow"><button class="link" id="back">← All exercises</button></span><button class="btn" id="go">Start interview</button></div>
   `);
   $('go').focus({ preventScroll: true });
@@ -1002,9 +1102,88 @@ function answers(picked) {
   $('begin').addEventListener('click', () => {
     closeModal();
     camera.position.copy(HOME);
-    controls.target.set(0, 0, 1);
+    controls.target.copy(HOME_TARGET);
     sim.start();
   });
+}
+
+// ── final architecture as a clean 2D diagram (GCP-style), built from the board layout
+function archSvg() {
+  const U = 34, TW = 128, TH = 74, GAP = 10; // px per world unit, tile size
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const short = (t, n = 18) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
+  const tiles = [], frames = [];
+  for (const n of sc.nodes) {
+    const label = plain(n.label) + (n.id === W.serverNode ? ` ×${serverCount()}` : '');
+    tiles.push({ key: n.id, x: n.pos[0], z: n.pos[1], label, obj: n, ext: n.model === 'external', users: n.model === 'users' });
+  }
+  for (const [id, list] of Object.entries(W.items)) {
+    const it = sim.item(id);
+    for (const x of list) {
+      const t = { key: id, x: x.pos.x, z: x.pos.z, label: plain(it.label || it.name), obj: it, trap: !!it.trap };
+      const host = tiles.find((o) => Math.hypot(o.x - t.x, o.z - t.z) < 1.5);
+      (host ? frames : tiles).push(host ? { ...t, host } : t); // a part built on top of another (Kubernetes around the API) wraps it
+    }
+  }
+  const minX = Math.min(...tiles.map((p) => p.x)), minZ = Math.min(...tiles.map((p) => p.z));
+  for (const t of tiles) { t.cx = (t.x - minX) * U; t.cy = (t.z - minZ) * U; }
+  for (let k = 0; k < 40; k++) { // push overlapping tiles apart
+    let moved = false;
+    for (let i = 0; i < tiles.length; i++) for (let j = i + 1; j < tiles.length; j++) {
+      const A = tiles[i], B = tiles[j], dx = B.cx - A.cx, dy = B.cy - A.cy;
+      const ox = TW + GAP - Math.abs(dx), oy = TH + GAP - Math.abs(dy);
+      if (ox <= 0 || oy <= 0) continue;
+      moved = true;
+      if (ox < oy) { const m = (ox / 2 + 0.5) * Math.sign(dx || 1); A.cx -= m; B.cx += m; }
+      else { const m = (oy / 2 + 0.5) * Math.sign(dy || 1); A.cy -= m; B.cy += m; }
+    }
+    if (!moved) break;
+  }
+  const FP = 16; // frame padding
+  const pad = 18 + FP;
+  const x0 = Math.min(...tiles.map((t) => t.cx)) - TW / 2 - pad, y0 = Math.min(...tiles.map((t) => t.cy)) - TH / 2 - pad - 8;
+  const x1 = Math.max(...tiles.map((t) => t.cx)) + TW / 2 + pad, y1 = Math.max(...tiles.map((t) => t.cy)) + TH / 2 + pad;
+  const byKey = {};
+  for (const t of tiles) (byKey[t.key] ||= []).push(t);
+  for (const f of frames) (byKey[f.key] ||= []).push(f.host); // wires to a wrapper attach to what it wraps
+  const trim = (ax, ay, bx, by) => {
+    const dx = bx - ax, dy = by - ay;
+    const k = Math.min((TW / 2 + 5) / Math.abs(dx || 1e-6), (TH / 2 + 5) / Math.abs(dy || 1e-6), 0.45);
+    return [ax + dx * k, ay + dy * k, bx - dx * k, by - dy * k, Math.hypot(dx, dy)];
+  };
+  let lines = '';
+  const seen = new Set();
+  for (const [a, b, o = {}] of sc.wires || []) {
+    if (o.if && !sim.has(o.if)) continue;
+    if (o.unless && sim.has(o.unless)) continue;
+    for (const A of byKey[a] || []) for (const B of byKey[b] || []) {
+      if (A === B || seen.has(A.key + '>' + B.key + A.cx + B.cx)) continue;
+      seen.add(A.key + '>' + B.key + A.cx + B.cx);
+      const [ax, ay, bx, by, len] = trim(A.cx, A.cy, B.cx, B.cy);
+      if (len < TW * 0.6) continue;
+      lines += `<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" ${o.dashed ? 'stroke-dasharray="6 5"' : ''} marker-end="url(#ah)"/>`;
+    }
+  }
+  const tileSvg = (t) => {
+    const g = gcpOf(sc, t.key, t.obj);
+    const glyph = t.users ? '👥' : t.obj.icon || (t.ext ? '🌐' : '▫️');
+    return `<g class="tile${t.ext ? ' ext' : ''}${t.trap ? ' trap' : ''}${t.users ? ' users' : ''}" transform="translate(${(t.cx - TW / 2).toFixed(1)},${(t.cy - TH / 2).toFixed(1)})">
+      <rect width="${TW}" height="${TH}" rx="10"/>
+      ${g.src ? `<image href="${g.src}" x="${TW / 2 - 15}" y="8" width="30" height="30"/>` : `<text class="emo" x="${TW / 2}" y="33">${glyph}</text>`}
+      <text class="nm" x="${TW / 2}" y="${g.name ? 53 : 57}">${esc(short(t.label))}</text>
+      ${g.name ? `<text class="pd" x="${TW / 2}" y="66">${esc(short(g.name, 22))}</text>` : ''}
+      <title>${esc(t.label)}${g.name ? ` · ${esc(g.name)}` : ''}</title></g>`;
+  };
+  const frameSvg = (f, i) => {
+    const g = gcpOf(sc, f.key, f.obj), h = f.host, e = FP + i * 8;
+    const x = h.cx - TW / 2 - e, y = h.cy - TH / 2 - e - 14, w = TW + e * 2, hh = TH + e * 2 + 14;
+    return `<g class="frame${f.trap ? ' trap' : ''}"><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w}" height="${hh}" rx="14"/>
+      ${g.src ? `<image href="${g.src}" x="${(x + 8).toFixed(1)}" y="${(y + 5).toFixed(1)}" width="16" height="16"/>` : ''}
+      <text class="fl" x="${(x + (g.src ? 29 : 10)).toFixed(1)}" y="${(y + 17).toFixed(1)}">${esc(f.label)}</text></g>`;
+  };
+  return `<svg class="arch" viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${(x1 - x0).toFixed(0)} ${(y1 - y0).toFixed(0)}" role="img" aria-label="Final architecture diagram">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z"/></marker></defs>
+    ${frames.map(frameSvg).join('')}<g class="wires">${lines}</g>${tiles.map(tileSvg).join('')}</svg>`;
 }
 
 // ── results
@@ -1044,7 +1223,9 @@ function showResults() {
       <div><small>Revenue</small><b>$${r.revenue}</b></div>
       <div><small>Reputation</small><b>${Math.round(r.rep)}</b></div>
     </div>
-    ${snapshots.length ? `<h3>How your architecture evolved</h3><div class="evo">${snapshots.map((s) => `<figure><img src="${s.url}" alt="Architecture after ${s.name}" /><figcaption>${s.name}</figcaption></figure>`).join('')}</div>` : ''}
+    <h3>Your final architecture</h3>
+    <div class="arch-wrap">${archSvg()}</div>
+    ${snapshots.length ? `<details class="evo-d"><summary>How it evolved, phase by phase (${snapshots.length})</summary><div class="evo">${snapshots.map((s) => `<figure><img src="${s.url}" alt="Architecture after ${s.name}" /><figcaption>${s.name}</figcaption></figure>`).join('')}</div></details>` : ''}
     <div class="cols">
       <div class="g"><h3>✓ Signals</h3><ul>${r.signals.map((s) => `<li>${s}</li>`).join('') || '<li>None</li>'}</ul></div>
       <div class="r"><h3>⚑ Red flags</h3><ul>${r.flags.map((s) => `<li>${s}</li>`).join('') || '<li>None</li>'}</ul></div>
@@ -1052,10 +1233,26 @@ function showResults() {
     <div class="ask"><h3>💬 Ask next</h3><ol>${r.followups.map((s) => `<li>${s}</li>`).join('')}</ol></div>
     <details class="review" ${interview() ? 'open' : ''}><summary>Answer review (${review.filter((x) => x.good).length}/${review.length} strong)</summary><ul>${review.map((x) => `<li class="${x.good ? 'good' : 'bad'}"><b>${x.good ? '✓' : '✕'} ${x.title}</b><span>${x.chosen}</span>${!x.good && x.best ? `<span class="best">Better: ${x.best} · <em>${x.why}</em></span>` : ''}</li>`).join('')}</ul></details>
     <details class="timeline"><summary>Timeline (${tl.length})</summary><ul>${tl.map((e) => `<li class="${e.tone}"><span>${mmss(e.t)}</span><em>${sc.phases[e.phase].name}</em>${e.kind === 'buy' ? '🛒 ' : ['answer', 'puzzle', 'ask'].includes(e.kind) ? '💬 ' : '⚡ '}${e.text}</li>`).join('')}</ul></details>
-    <div class="row"><span class="grow"><button class="link" id="others">← Other exercises</button></span><button class="btn alt" id="copy">Copy summary</button><button class="btn" id="again">Play again</button></div>
-  `, 'wide');
+    <div class="row"><span class="grow"><button class="link" id="others">← Other exercises</button></span><button class="btn alt" id="dl">⬇ Diagram</button><button class="btn alt" id="copy">Copy summary</button><button class="btn" id="again">Play again</button></div>
+  `, 'wide results');
   $('again').addEventListener('click', () => location.reload());
   $('others').addEventListener('click', toPicker);
+  $('dl').addEventListener('click', async (e) => {
+    // standalone SVG: inline the stylesheet and the icons so it opens anywhere (docs, slides, feedback forms)
+    const svg = modal.querySelector('svg.arch').cloneNode(true);
+    for (const im of svg.querySelectorAll('image')) {
+      try { const txt = await (await fetch(im.getAttribute('href'))).text(); im.setAttribute('href', 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(txt)))); } catch {}
+    }
+    const css = `text{text-anchor:middle;font-family:'IBM Plex Sans',Arial,sans-serif}.wires line{stroke:#1c2433;stroke-width:1.6}marker path{fill:#1c2433}.tile rect{fill:#fff;stroke:#1c2433;stroke-width:1.6}.tile.ext rect{fill:#f4f6f9;stroke:#8a97ab;stroke-dasharray:5 4}.tile.trap rect{stroke:#e8930c;stroke-width:2}.tile.users rect{fill:#fff8d6}.nm{font-size:13.5px;font-weight:600;fill:#1c2433}.pd{font-size:10.5px;fill:#667085}.emo{font-size:22px}.frame rect{fill:rgba(47,111,237,.05);stroke:#2f6fed;stroke-width:1.5;stroke-dasharray:7 5}.frame.trap rect{stroke:#e8930c}.fl{text-anchor:start;font-size:12px;font-weight:700;fill:#1c2433}`;
+    svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    svg.insertAdjacentHTML('afterbegin', `<style>${css}</style><rect x="${svg.viewBox.baseVal.x}" y="${svg.viewBox.baseVal.y}" width="100%" height="100%" fill="#fff"/>`);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([svg.outerHTML], { type: 'image/svg+xml' }));
+    a.download = `${sc.id}-architecture.svg`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    e.target.textContent = 'Saved ✓';
+  });
   $('copy').addEventListener('click', async (e) => {
     const text = summaryText(r);
     try { await navigator.clipboard.writeText(text); }

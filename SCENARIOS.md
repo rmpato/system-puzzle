@@ -71,6 +71,7 @@ export default {
   //   fixesConn: true     the connections.fix item
   //   trap: true          over-engineering; flagged if bought before `trapUntil` (default: last phase)
   // Visual: model (see list below), color, label, pos | slots, ghost (slot size, default 2.6), r (wire padding).
+  // Icon/section: mapped by id in src/gcp.js; override with gcp: 'memorystore' (or null for a pattern) and cat: 'compute'|'data'|'cache'|'async'|'edge'|'ai'|'pattern'.
 
   // Diagram arrows. Items only appear once built; `if`/`unless` toggle arrows.
   wires: [['users', 'api'], ['api', 'cache', { if: 'cache' }], ['db', 'replica', { if: 'replica', dashed: true }]],

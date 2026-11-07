@@ -42,7 +42,13 @@ Every exercise ends with a real traffic surge (a viral link, a doorbuster, midni
 4. **Whiteboard breaks** between phases: order, pick and sort puzzles plus single-choice cards.
 5. **Debrief:** grade, uptime, judgement, revenue, reputation, a timelapse of how the architecture evolved, signals and red flags (proactive vs reactive), **Ask next** follow-ups for the interviewer, the answer review, a timeline, and **Copy summary**.
 
-Controls: drag to look around · `Space` pause · `M` mute · `1×/2×` speed.
+Controls: drag to look around · click any part to inspect it · `Space` pause · `M` mute · `1`–`9` buy · `1×/2×` speed.
+
+## Google Cloud icons
+
+Every part is shown with the Google Cloud product you would use for it (Compute Engine, Cloud SQL, Memorystore, Pub/Sub, Cloud CDN, Cloud Armor, Spanner, GKE…). Design patterns that aren't products (idempotency keys, locks, sequence numbers) keep an emoji. The shop is grouped Compute · Data · Cache · Async · Edge · AI · Patterns, clicking a part opens an inspector (product, load, capacity, failures), and the debrief draws your **final architecture** as a GCP-style diagram you can download as a standalone SVG.
+
+Icons are the official set from [cloud.google.com/icons](https://cloud.google.com/icons), stored in `assets/gcp/`. Mapping lives in `src/gcp.js`; a scenario item or node can override it with `gcp: '<icon>'` (or `gcp: null`) and `cat: '<section>'`.
 
 ## Project layout
 
@@ -51,6 +57,8 @@ index.html              styles + shell
 src/main.js             renderer and UI (data-driven, no scenario specifics)
 src/engine/sim.js       pure simulation: pools, requests, hazards, scoring, interviewer report
 src/engine/models.js    whiteboard-style 3D model library
+src/gcp.js              part → Google Cloud product icon + shop section
+assets/gcp/             official Google Cloud product icons (SVG)
 src/scenarios/*.js      one file per exercise (+ *-copy.js for its questions and puzzles)
 src/scenarios/index.js  registry (picker order)
 tools/validate.mjs      schema and layout checks
