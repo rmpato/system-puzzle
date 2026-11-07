@@ -31,7 +31,7 @@ export default {
     { id: 'idem', icon: '🔑', name: 'Idem. keys', cost: 150, desc: 'Retries never move money twice', model: 'key', color: '#ffd76a', pos: [-7, 3.8], label: 'Idempotency', symptom: 'hazard:duplicate', proactive: 1 },
     { id: 'lock', icon: '🔒', name: 'Row lock', cost: 160, desc: 'FOR UPDATE: no overdrafts', model: 'lock', color: '#cfd6e2', pos: [12, 3.8], label: 'Row lock', symptom: 'hazard:race', proactive: 2 },
     { id: 'recon', icon: '⚙️', name: 'Reconciler', cost: 160, desc: 'Resolves pending bank calls', model: 'gear', color: '#c7d2fe', pos: [-5.5, 8.5], label: 'Reconciler', symptom: 'hazard:timeout', proactive: 1 },
-    { id: 'outbox', icon: '📬', name: 'Outbox+queue', cost: 200, desc: 'Webhooks retried, never lost', model: 'tube', color: '#dbe2ec', pos: [8, 11], label: 'Outbox → queue', symptom: 'outage', proactive: 2 },
+    { id: 'outbox', icon: '📬', name: 'Outbox', cost: 200, desc: 'Webhooks retried, never lost', model: 'tube', color: '#dbe2ec', pos: [8, 11], label: 'Outbox → queue', symptom: 'outage', proactive: 2 },
     { id: 'risk', icon: '🕵️', name: 'Async risk', cost: 200, desc: 'ML scoring off the hot path', model: 'shield', color: '#ffcf8a', pos: [-5.5, -5], label: 'Async ML risk', symptom: 'hot:api', proactive: 2, relieves: 'api' },
     { id: 'warehouse', icon: '🏬', name: 'Warehouse', cost: 220, desc: 'Statements off the primary', model: 'stack', color: '#c5e8ff', pos: [12, -6.5], label: 'Warehouse', symptom: 'type:statement', relieves: 'read' },
     { id: 'replica', icon: '📚', name: 'Read replica', cost: 220, max: 2, desc: 'More capacity for reads', model: 'cyl', color: '#ffe6c2', slots: [[15.6, -3.2], [15.6, 3.2]], label: 'Replica', scales: 'read' },
