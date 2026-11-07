@@ -9,7 +9,7 @@ export default {
   topics: ['Idempotency', 'Double-entry ledger', 'Row locks', 'Reconciliation', 'Outbox'],
   difficulty: 'Expert',
   brief: '"Design a wallet and payments API. Users send money, merchants get paid and notified. Never lose or invent a cent."',
-  money: 100,
+  money: 200,
   startCard: 'start',
 
   pools: {

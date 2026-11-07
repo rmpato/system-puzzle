@@ -30,6 +30,8 @@ Every exercise ends with a real traffic surge (a viral link, a doorbuster, midni
 ## Modes
 
 - **🎓 Practice:** each answer is explained right away, and the shop glows toward the fix for the current incident.
+
+**Budget:** you start with $200; good clarifying questions add $25, correct cards $40. A fix you named correctly on a card is half price and can be bought on credit (budget goes negative and refills from revenue), so knowing the answer is never blocked by money. Unaffordable parts show ⏱ seconds until affordable.
 - **🧑‍⚖️ Interview:** for running it with a candidate. No hints, and answers are recorded but not revealed. The debrief has the full answer review.
 
 ## A session (~8–10 min)

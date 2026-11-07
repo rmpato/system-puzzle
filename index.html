@@ -95,6 +95,9 @@
   .item.poor .p { color: var(--bad); }
   .item:disabled { cursor: not-allowed; }
   .item.poor { opacity: .55; }
+  .item .wait { position: absolute; left: 0; right: 0; top: -19px; font: 600 11px var(--font-body, inherit); font-style: normal; color: var(--ink); }
+  .item.poor:has(.wait) { opacity: .75; }
+  .item.credit .p { color: var(--good); }
   .item.done { opacity: .5; box-shadow: none; border-style: dashed; }
   .item.done .p { color: var(--good); }
   .item .n { position: absolute; top: 4px; right: 7px; font: 800 12px var(--font-display); color: var(--blue); }

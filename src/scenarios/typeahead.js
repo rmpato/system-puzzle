@@ -10,7 +10,7 @@ export default {
   topics: ['Trie / top-k', 'Debouncing', 'Edge caching', 'Offline pipelines', 'Trending'],
   difficulty: 'Medium',
   brief: '"Design search autocomplete. As users type, show the top 5 suggestions in under 100 ms. Searches show ads."',
-  money: 100,
+  money: 200,
   startCard: 'start',
 
   pools: {

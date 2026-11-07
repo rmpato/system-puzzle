@@ -3,15 +3,16 @@
 // See SCENARIOS.md for the schema.
 
 export const TUNING = {
-  startMoney: 100,
+  startMoney: 200,
   failRep: 0.12,
   repRegen: 0.4,
   questionBonus: 25,
-  cardReward: 25,
+  cardReward: 40,
   cardPenalty: 6,
   puzzleItem: 4,
   puzzlePerfect: 10,
-  discount: 0.6,
+  discount: 0.5,
+  credit: true, // a fix you named correctly on a card can be bought on credit (budget goes negative)
 };
 
 const sum = (obj, f) => Object.entries(obj || {}).reduce((a, [k, v]) => a + f(k, v), 0);
@@ -26,7 +27,7 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     userPaused: false,
     time: 0, phase: 0, phaseTime: 0,
     money: T.startMoney, rep: 100, moneyRate: 0, lastMoney: T.startMoney,
-    built: {}, discount: {}, hint: {},
+    built: {}, discount: {}, hint: {}, credit: {},
     served: 0, failed: 0, revenue: 0,
     tok: {}, demand: {}, load: {}, nodeLoad: {}, hotT: 0, meterT: 0,
     accum: {}, seen: {}, signals: [], flags: [],
@@ -53,7 +54,9 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     const s = item(id);
     return Math.round(s.cost * (S.discount[id] ? T.discount : 1) * (1 + count(id) * (s.costStep || 0)));
   };
-  const canBuy = (id) => S.mode !== 'setup' && S.mode !== 'over' && count(id) < (item(id).max || 1) && S.money >= price(id);
+  const onCredit = (id) => !!(T.credit && S.credit[id] && S.money >= 0 && S.money < price(id));
+  const affordable = (id) => S.money >= price(id) || onCredit(id);
+  const canBuy = (id) => S.mode !== 'setup' && S.mode !== 'over' && count(id) < (item(id).max || 1) && affordable(id);
   const live = () => S.mode === 'play' && !S.userPaused;
   const nodePools = (node) => Object.keys(POOLS).filter((p) => POOLS[p].node === node);
   const nodeCap = (node) => nodePools(node).reduce((a, p) => a + cap(p), 0);
@@ -124,7 +127,7 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     S.answers[id] = o.good;
     if (o.good) { S.judge.pts += 1; S.money += T.cardReward; signal(`${c.title} → ${o.t}`); }
     else { S.rep = Math.max(1, S.rep - T.cardPenalty); flag(`${c.title} → ${o.t}`); }
-    if (c.fix && !has(c.fix)) { S.hint[c.fix] = true; if (o.good) S.discount[c.fix] = true; }
+    if (c.fix && !has(c.fix)) { S.hint[c.fix] = true; if (o.good) S.discount[c.fix] = S.credit[c.fix] = true; }
     log('answer', `${c.title}: ${o.t}`, o.good ? 'good' : 'bad');
     return { good: o.good, best: c.opts.findIndex((x) => x.good), fix: c.fix && !has(c.fix) ? c.fix : null };
   }
@@ -181,9 +184,11 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     if (S.outage) ctx.push(`${HZ.outage?.label || 'service'} down`);
     const sf = sc.report?.scaleFirst;
     if (sf && id === sf.item && sf.fixes.some(([sym, fix]) => S.firsts[sym] !== undefined && !has(fix))) S.counts.scaleFirst++;
+    if (S.money < cost) ctx.push('on credit');
     S.money -= cost;
     S.built[id] = count(id) + 1;
     delete S.hint[id];
+    delete S.credit[id];
     if (s.trap && S.phase < (s.trapUntil ?? PHASES.length - 1)) { flag(`Over-engineering: ${s.name} too early`); S.counts.earlyTraps++; }
     log('buy', `${s.name}${ctx.length ? ` (${ctx.join(', ')})` : ''}`, s.trap ? 'bad' : 'info');
     emit('buy', { id, n: count(id) });
@@ -474,7 +479,7 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
   return {
     S, reqs, T, sc,
     on: (fn) => listeners.push(fn),
-    item, count, has, cap, connections, connBad, upkeep, price, canBuy, live, nodeCap,
+    item, count, has, cap, connections, connBad, upkeep, price, canBuy, affordable, onCredit, live, nodeCap,
     ask, start, buy, step, togglePause, current, answerCard, solvePuzzle, next, results,
   };
 }

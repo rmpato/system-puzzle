@@ -9,7 +9,7 @@ export default {
   topics: ['CDN', 'Pre-signed uploads', 'Async jobs', 'Counters', 'HLS'],
   difficulty: 'Medium',
   brief: '"Build a video platform. Creators upload videos, viewers watch, search and see view counts."',
-  money: 100,
+  money: 200,
   startCard: 'start',
 
   pools: {

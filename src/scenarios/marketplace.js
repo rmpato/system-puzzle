@@ -9,7 +9,7 @@ export default {
   topics: ['Idempotency', 'Connection pooling', 'Queues', 'Read replicas', 'CDN'],
   difficulty: 'Medium',
   brief: '"Build a marketplace. Users browse stores and products, add to cart, pay, and get notified. Stores see their orders."',
-  money: 100,
+  money: 200,
   startCard: 'start',
 
   pools: {

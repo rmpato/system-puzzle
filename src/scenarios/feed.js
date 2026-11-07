@@ -9,7 +9,7 @@ export default {
   topics: ['Fan-out on write', 'Celebrity hot keys', 'Timeline cache', 'Batched counters', 'Cursor pagination'],
   difficulty: 'Hard',
   brief: '"Design a social feed like Twitter or Instagram. Users post, follow people, and scroll a home timeline of the people they follow."',
-  money: 100,
+  money: 200,
   startCard: 'start',
 
   pools: {

@@ -33,7 +33,7 @@ export default {
   pitch: 'One line for the picker.', topics: ['3-5 short concept tags'],
   difficulty: 'Easy' | 'Medium' | 'Hard' | 'Expert',
   brief: '"The interviewer\'s prompt, in quotes, 1-2 sentences."',
-  money: 100,              // starting budget
+  money: 200,              // starting budget (good questions +25 each, correct cards +40)
   startCard: 'start',      // card shown ~2.5s in (usually an architecture-choice question)
 
   // Capacity pools: requests spend "cost" from pools; tokens refill at cap per second.

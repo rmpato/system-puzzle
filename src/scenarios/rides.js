@@ -9,7 +9,7 @@ export default {
   topics: ['Geo index', 'Atomic dispatch', 'Idempotency', 'Queues', 'Caching'],
   difficulty: 'Expert',
   brief: '"Design a ride-hailing app. Drivers share their location, riders request a ride, we match them, and charge at the end."',
-  money: 100,
+  money: 200,
   startCard: 'start',
 
   pools: {

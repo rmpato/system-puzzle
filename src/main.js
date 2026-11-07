@@ -602,19 +602,27 @@ function renderShop() {
   const shop = $('shop');
   shop.hidden = !playing();
   if (!playing()) return;
-  const sig = sc.shop.map((s) => [sim.count(s.id), sim.price(s.id), S.money >= sim.price(s.id), !!S.hint[s.id]].join()).join('|');
+  const sig = sc.shop.map((s) => [sim.count(s.id), sim.price(s.id), sim.affordable(s.id), sim.onCredit(s.id), waitFor(s.id), !!S.hint[s.id]].join()).join('|');
   if (sig === shopSig) return;
   shopSig = sig;
   shop.innerHTML = sc.shop.map((s, i) => {
     const n = sim.count(s.id), max = s.max || 1, price = sim.price(s.id);
-    const done = n >= max, poor = !done && S.money < price;
-    return `<button class="item ${s.trap ? 'trap' : ''} ${done ? 'done' : ''} ${poor ? 'poor' : ''} ${S.hint[s.id] && !done && !interview() ? 'hint' : ''}" data-id="${s.id}" ${done || poor ? 'disabled' : ''} aria-label="${s.name}, $${price}">
+    const done = n >= max, poor = !done && !sim.affordable(s.id), credit = !done && sim.onCredit(s.id), wait = poor ? waitFor(s.id) : 0;
+    return `<button class="item ${s.trap ? 'trap' : ''} ${done ? 'done' : ''} ${poor ? 'poor' : ''} ${credit ? 'credit' : ''} ${S.hint[s.id] && !done && !interview() ? 'hint' : ''}" data-id="${s.id}" ${done || poor ? 'disabled' : ''} aria-label="${s.name}, $${price}">
       ${i < 9 ? `<span class="k">${i + 1}</span>` : ''}<span class="ic">${s.icon}</span>${max > 1 && n ? `<span class="n">${n}</span>` : ''}
       <b>${s.name}</b>
-      <span class="p">${done ? '✓' : `$${price}`}</span>
+      <span class="p">${done ? '✓' : credit ? `💳 $${price}` : `$${price}`}${wait ? `<i class="wait">⏱ ${wait}s</i>` : ''}</span>
     </button>`;
   }).join('');
   syncGhosts();
+}
+// Seconds until an unaffordable item is affordable at the current income rate (0 = unknown / too far).
+function waitFor(id) {
+  if (sim.affordable(id) || sim.count(id) >= (sim.item(id).max || 1)) return 0;
+  const gap = sim.price(id) - S.money, r = S.moneyRate;
+  if (r <= 0.3) return 0;
+  const t = Math.ceil(gap / r);
+  return t <= 60 ? t : 0;
 }
 const shopEl = $('shop');
 shopEl.addEventListener('click', (e) => { const b = e.target.closest('.item'); if (b && !b.disabled) buy(b.dataset.id); });
@@ -623,7 +631,7 @@ shopEl.addEventListener('pointerover', (e) => {
   if (!b) return;
   const s = sim.item(b.dataset.id);
   const tip = $('tip');
-  tip.textContent = s.desc;
+  tip.textContent = sim.onCredit(s.id) ? `${s.desc} · 💳 you named this fix: buy now on credit` : s.desc;
   tip.hidden = false;
   const r = b.getBoundingClientRect();
   tip.style.left = Math.max(12, Math.min(innerWidth - 252, r.left)) + 'px';
@@ -813,7 +821,7 @@ function showCard(cur) {
       if (j === i || j === res.best) x.insertAdjacentHTML('beforeend', `<small>${md(c.opts[j].why)}</small>`);
     });
     const fix = res.fix && sim.item(res.fix);
-    const reward = `<span class="delta ${res.good ? 'up' : 'down'}">${res.good ? `+$${sim.T.cardReward}` : `−${sim.T.cardPenalty} rep`}</span>${fix ? ` <span class="fix">→ ${fix.icon} ${fix.name}${res.good ? ' −40%' : ''}</span>` : ''}`;
+    const reward = `<span class="delta ${res.good ? 'up' : 'down'}">${res.good ? `+$${sim.T.cardReward}` : `−${sim.T.cardPenalty} rep`}</span>${fix ? ` <span class="fix">→ ${fix.icon} ${fix.name}${res.good ? ` −${Math.round((1 - sim.T.discount) * 100)}% · 💳 even if short` : ''}</span>` : ''}`;
     modal.querySelector('.card').insertAdjacentHTML('beforeend', cont(cur.closing && cur.step === cur.total ? 'Results' : 'Continue', reward));
     bindCont();
   }));

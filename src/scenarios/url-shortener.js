@@ -9,7 +9,7 @@ export default {
   topics: ['Caching', 'ID generation', 'Async analytics', 'CDN', 'Rate limiting'],
   difficulty: 'Easy',
   brief: '"Design a URL shortener like bit.ly. Users create short links; visitors get redirected. Pro customers pay for click stats."',
-  money: 100,
+  money: 200,
   startCard: 'start',
 
   pools: {

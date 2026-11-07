@@ -9,7 +9,7 @@ export default {
   topics: ['Waiting room', 'Seat holds', 'Idempotency', 'Bot defense', 'Caching'],
   difficulty: 'Hard',
   brief: '"Design ticketing for a superstar tour. Millions of fans hit Buy at 10:00 sharp. No seat may sell twice."',
-  money: 100,
+  money: 200,
   startCard: 'start',
 
   pools: {

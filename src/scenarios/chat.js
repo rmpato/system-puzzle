@@ -9,7 +9,7 @@ export default {
   topics: ['WebSockets', 'Idempotent sends', 'Ordering', 'Presence TTL', 'Fan-out'],
   difficulty: 'Hard',
   brief: '"Design a chat app like WhatsApp. 1:1 and group messages, delivered instantly, with history and offline notifications."',
-  money: 100,
+  money: 200,
   startCard: 'start',
 
   pools: {
