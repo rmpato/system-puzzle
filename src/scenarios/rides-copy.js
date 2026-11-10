@@ -3,7 +3,7 @@
 export const QUESTIONS = [
   { q: 'How many drivers, how often do they ping?', a: 'Thousands soon. Every 4 seconds.', good: true },
   { q: 'Can a driver get two trips at once?', a: 'Never. One active trip per driver.', good: true },
-  { q: 'Charge upfront or at trip end?', a: 'At the end. The provider can time out.', good: true },
+  { q: 'Charge upfront or at trip end?', a: 'Authorize at request, capture at the end.', good: true },
   { q: 'How fresh must driver locations be?', a: 'A few seconds stale is fine.', good: true },
   { q: 'One city or global at launch?', a: 'One city now. More next year.', good: true },
   { q: 'Can "driver arriving" pushes be lost?', a: 'No. Late is OK, lost is not.', good: true },
@@ -39,7 +39,7 @@ export const CARDS = {
     o('Disable the button', false, 'Network retries still duplicate.'),
     o('Refund later', false, 'Not a strategy.')] },
   timeout: { icon: '⏳', title: 'Payment timed out', text: 'Did the fare charge or not?', opts: [
-    o('Mark pending, then reconcile', true, 'Ask the provider by idempotency key.'),
+    o('Mark pending, then reconcile', true, 'Query status or retry with same key.'),
     o('Assume failed, charge again', false, 'Might charge twice.'),
     o('Assume success, move on', false, 'Might ride for free.')] },
   race: { icon: '🏁', title: 'Driver got two trips', text: 'Two riders, same millisecond.', fix: 'cas', opts: [
@@ -58,9 +58,9 @@ export const CARDS = {
   sqlgeo: { icon: '🧮', title: 'Why not SQL lat/lng?', text: 'WHERE lat BETWEEN … AND lng …', opts: [
     o('Writes too hot, 2D range scans wide', true, 'B-trees index one axis well.'),
     o('SQL cannot store decimals', false, 'It can.'),
-    o('It is fine at any scale', false, 'Not at 1M pings per minute.')] },
+    o('It is fine at any scale', false, 'Not at this ping rate.')] },
   cellsize: { icon: '🔲', title: 'Pick a cell size', text: 'Search drivers by geohash cell.', opts: [
-    o('Block-sized cells + neighbor cells', true, 'Small scan, no edge misses.'),
+    o('Radius-sized cells + 8 neighbors', true, 'Small scan, no edge misses.'),
     o('One cell per city', false, 'Scans every driver.'),
     o('Tiny cells, center cell only', false, 'Misses drivers across edges.')] },
   offline: { icon: '📵', title: 'Driver offline mid-trip', text: 'Pings stop for 60s.', opts: [
@@ -88,7 +88,7 @@ export const PUZZLES = {
     signal: 'Walked the trip lifecycle end to end', flag: 'Shaky on the trip lifecycle',
   },
   ping: {
-    kind: 'pick', icon: '📍', title: 'Location ping', text: 'Pick the 3 fields a ping needs.', pick: 3,
+    kind: 'pick', icon: '📍', title: 'Location ping', text: 'Pick the 3 fields each ping stores.', pick: 3,
     items: [
       { t: 'driver_id', good: true },
       { t: 'lat, lng', good: true },

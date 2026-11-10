@@ -45,19 +45,19 @@ export const CARDS = {
   push: { icon: '🔕', title: 'APNs is down', text: 'Offline users get no alert.', fix: 'queue', opts: [
     o('Queue pushes, retry when it recovers', true, 'Nothing lost, delivered late.'),
     o('Retry inline in the send path', false, 'Sends now fail with APNs.'),
-    o('Build our own push protocol', false, 'Phones only wake for APNs/FCM.')] },
+    o('Build our own push protocol', false, 'OS only wakes apps via APNs/FCM.')] },
   groups: { icon: '👥', title: 'Group messages are heavy', text: '1 send → 200 inbox writes.', opts: [
     o('Ack once, fan out async via a queue', true, 'Sender isn\'t blocked by members.'),
     o('Write all inboxes before acking', false, 'Latency grows with group size.'),
     o('Clients poll the group', false, 'Polling again, ×200.')] },
   spike: { icon: '🎆', title: 'New Year\'s midnight', text: '10× messages in one minute.', fix: 'queue', opts: [
-    o('Queue absorbs it, scale consumers', true, 'Buffer, then drain.'),
+    o('Pre-scale; queue absorbs the burst', true, 'Known peak: scale ahead, buffer rest.'),
     o('Reject sends over a limit', false, 'Worst moment to fail users.'),
     o('Sync fan-out, bigger servers', false, 'Peaks beat any box.')] },
   // whiteboard cards
   storage: { icon: '🗄️', title: 'Store billions of messages', text: 'Write-heavy, read by chat.', opts: [
     o('Wide-column, partition by conversation', true, 'One chat = one partition, sorted by seq.'),
-    o('One Postgres table, index later', false, 'Single writer won\'t keep up.'),
+    o('One Postgres table, index later', false, 'One primary caps write throughput.'),
     o('Partition by sender', false, 'A chat spans many partitions.')] },
   pagination: { icon: '📜', title: 'Scroll up in a chat', text: 'Years of history.', opts: [
     o('Cursor: messages before seq N', true, 'Stable pages, one partition.'),

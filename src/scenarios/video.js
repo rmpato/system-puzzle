@@ -80,7 +80,7 @@ export default {
   hazards: {
     duplicate: { type: 'upload', fix: 'idem', card: 'dupjob', rep: 3, money: 8, text: '♻️ transcoded twice', blocked: '🔑 same job ID', at: 'transcode', firstText: 'A retried upload was transcoded twice', score: 6 },
     timeout: { type: 'upload', fix: 'presign', card: 'bigupload', rep: 1.5, text: '⏳ upload timed out', at: 'api', firstText: 'A big upload timed out in the API', score: 4 },
-    outage: { node: 'transcode', label: 'Transcoders', card: 'transcode', rep: 1.5, startText: 'Transcoder workers went down', lostText: 'Uploads were lost: never transcoded', event: { to: 'transcode', via: 'queue', type: 'job' }, score: 3 },
+    outage: { node: 'transcode', label: 'Transcoders', card: 'transcode', rep: 1.5, startText: 'Transcoder workers went down', lostText: 'Jobs were lost: uploads never transcoded', event: { to: 'transcode', via: 'queue', type: 'job' }, score: 3 },
     spike: { card: 'viral' },
     overload: { node: 'db', card: 'dbload', after: 3 },
   },
@@ -105,7 +105,7 @@ export default {
     ],
     combos: [{ items: ['idem', 'queue'], signal: 'At-least-once jobs + idempotent workers' }],
     counters: [
-      { counter: 'lost', min: 3, flag: 'Lost {n} uploads in a transcoder outage' },
+      { counter: 'lost', min: 3, flag: 'Lost {n} transcode jobs in an outage' },
       { counter: 'duplicate', min: 3, flag: 'Transcoded the same upload twice {n}×' },
       { counter: 'timeout', min: 4, flag: '{n} uploads timed out in the API' },
     ],

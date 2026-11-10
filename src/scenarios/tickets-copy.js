@@ -31,7 +31,7 @@ export const CARDS = {
     o('Let autoscaling react', false, 'Scales after the spike ends.'),
     o('Fastest request wins', false, 'Unfair: bots are fastest.')] },
   bots: { icon: '🤖', title: 'Bots grabbing seats', text: 'Scalpers hold half the venue.', fix: 'shield', opts: [
-    o('Rate limit + bot detection at edge', true, 'Bots never reach the backend.'),
+    o('Rate limit + bot detection at edge', true, 'Most bots stopped before the backend.'),
     o('CAPTCHA after payment', false, 'Seats already held by then.'),
     o('Add servers for the bots', false, 'Paying to serve scalpers.')] },
   double: { icon: '💸', title: 'Charged twice', text: 'Fan retried a slow checkout.', fix: 'idem', opts: [
@@ -39,11 +39,11 @@ export const CARDS = {
     o('Disable the Pay button', false, 'Network retries still duplicate.'),
     o('Refund duplicates later', false, 'Angry fans, not a strategy.')] },
   timeout: { icon: '⏳', title: 'Payment provider timed out', text: 'Did it charge or not?', fix: 'recon', opts: [
-    o('Keep seat pending, then reconcile', true, 'Ask provider by idempotency key.'),
+    o('Keep seat pending, then reconcile', true, 'Query status or retry with same key.'),
     o('Release the seat now', false, 'A paying fan loses the seat.'),
     o('Charge again to be sure', false, 'Might charge twice.')] },
   race: { icon: '🏁', title: 'Two fans, one seat', text: 'Same seat, same millisecond.', fix: 'hold', opts: [
-    o('Atomic hold: UPDATE … WHERE free', true, 'Only one write wins.'),
+    o('Atomic hold: UPDATE … WHERE free', true, 'Row lock: the loser updates 0 rows.'),
     o('Check it is free, then write', false, 'Both read free. Both win.'),
     o('Lock the whole event', false, 'Serializes every buyer.')] },
   email: { icon: '📭', title: 'Email service down', text: 'Sales continue. Tickets lost?', fix: 'queue', opts: [

@@ -18,7 +18,7 @@ export const CARDS = {
   start: { icon: '🏗️', title: 'Where does the ledger live?', text: 'Small team. Money must add up.', opts: [
     o('Postgres, ACID, one modular service', true, 'Transactions and constraints for free.'),
     o('A blockchain, for trust', false, 'Slow, costly, you are the only party.'),
-    o('NoSQL per currency, scale later', false, 'Weak cross-row transactions, no constraints.')] },
+    o('NoSQL per currency, scale later', false, 'Weaker multi-row txns, few constraints.')] },
   statements: { icon: '📄', title: 'Statements hit the primary', text: 'Big scans next to live payments.', fix: 'warehouse', opts: [
     o('Run reports on a warehouse/replica', true, 'Keep the primary for writes.'),
     o('Run them at night on the primary', false, 'Users want them now; still contends.'),
@@ -32,7 +32,7 @@ export const CARDS = {
     o('Read balance, check, then write', false, 'Both read $100. Both pass.'),
     o('Check a cached balance first', false, 'Stale and still racy.')] },
   timeout: { icon: '⏳', title: 'Bank call timed out', text: 'Did the money move?', fix: 'recon', opts: [
-    o('Mark pending; reconcile with the bank', true, 'Query by idempotency key, then settle.'),
+    o('Mark pending; reconcile with the bank', true, 'Query status by your reference, then settle.'),
     o('Assume failed, retry new charge', false, 'May pay twice.'),
     o('Assume success, mark settled', false, 'Ledger lies if it failed.')] },
   hooks: { icon: '🔕', title: 'Merchant endpoint down', text: 'Payments keep settling. Events?', fix: 'outbox', opts: [
@@ -61,12 +61,12 @@ export const CARDS = {
     o('It doubles the backups', false, 'Not about redundancy.'),
     o('Only accountants need it', false, 'It is your invariant check.')] },
   integers: { icon: '🔢', title: 'Storing $10.10', text: 'Which type?', opts: [
-    o('Integer minor units: 1010 cents', true, 'Exact math, no rounding drift.'),
+    o('Integer minor units: 1010 cents', true, 'Exact. DECIMAL works too; never FLOAT.'),
     o('FLOAT 10.1', false, '0.1 + 0.2 ≠ 0.3.'),
     o('String "10.10"', false, 'No math, no constraints.')] },
   exactly: { icon: '🎯', title: '"Exactly-once" payments?', text: 'How do you get it?', opts: [
     o('At-least-once retries + idempotency', true, 'Effectively once, end to end.'),
-    o('A queue with exactly-once mode', false, 'Breaks at your DB and the bank.'),
+    o('A queue with exactly-once mode', false, 'Only inside the broker, not the bank.'),
     o('Never retry anything', false, 'At-most-once loses payments.')] },
   outbox: { icon: '📤', title: 'Write ledger, then publish?', text: 'Crash between the two steps.', opts: [
     o('Outbox row in the same txn, relay later', true, 'Event exists iff money moved.'),

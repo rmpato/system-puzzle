@@ -16,8 +16,8 @@ const o = (t, good, why) => ({ t, good, why });
 // Single-choice cards. Incidents fire during play; the rest appear in whiteboard breaks.
 export const CARDS = {
   start: { icon: '🔢', title: 'How do you make codes?', text: 'Short, unique, never reused.', fix: 'idgen', opts: [
-    o('Base62 of a counter (ID ranges)', true, 'Unique by construction, no lookups.'),
-    o('First 7 chars of MD5(url)', false, 'Truncated hashes collide.'),
+    o('Base62 of a counter (ID ranges)', true, 'Unique, no retries; shuffle if guessing matters.'),
+    o('First 7 chars of MD5(url)', false, 'Collides; needs check-and-retry anyway.'),
     o('UUID v4 as the code', false, '36 chars isn\'t short.')] },
   collision: { icon: '💥', title: 'Two links, one code', text: 'A random code already existed.', fix: 'idgen', opts: [
     o('ID service hands out counter ranges', true, 'No collisions, no retries.'),

@@ -21,21 +21,21 @@ export const CARDS = {
     o('Microservices from day one', false, 'Distributed cost, no reason yet.'),
     o('Kubernetes first, decide later', false, 'Infra before requirements.')] },
   images: { icon: '🖼️', title: 'Images served by the API', text: 'What breaks as you scale?', fix: 'cdn', opts: [
-    o('Bandwidth. Move them to a CDN.', true, 'Static files belong at the edge.'),
+    o('Bandwidth. Object storage + CDN.', true, 'Static files belong at the edge.'),
     o('Nothing. Add servers.', false, 'Paying compute to move bytes.'),
     o('Store them in the DB', false, 'Now the DB chokes too.')] },
   search: { icon: '🐢', title: '/search is slow', text: 'Full-text over the whole catalog.', fix: 'search', opts: [
-    o('Dedicated search index', true, 'Offloads the DB, scales alone.'),
+    o('Dedicated search index', true, 'Inverted index, ranking; offloads the DB.'),
     o('More DB CPU', false, 'Buys time, not a fix.'),
     o('Cache every query', false, 'Unbounded queries, low hit rate.')] },
   double: { icon: '💸', title: 'Charged twice', text: 'A user double-clicked Pay.', fix: 'idem', opts: [
-    o('Idempotency key per attempt', true, 'Repeats return the same result.'),
+    o('Idempotency key per checkout', true, 'Retries reuse the key: one charge.'),
     o('Disable the button', false, 'Retries and redelivered events still duplicate.'),
     o('Refund later', false, 'Not a strategy.')] },
   connections: { icon: '🔌', title: 'Too many connections', text: 'Servers × 10 > 40 allowed.', fix: 'pgbouncer', opts: [
     o('Connection pooler (PgBouncer)', true, 'Servers share a small pool.'),
     o('The DB will queue them', false, 'Postgres rejects them.'),
-    o('max_connections = 10,000', false, 'The DB melts first.')] },
+    o('max_connections = 10,000', false, 'A process per conn; RAM melts first.')] },
   dbload: { icon: '🔥', title: 'Database at 100%', text: 'Mostly product reads.', fix: 'cache', opts: [
     o('Cache hot reads, add a read replica', true, 'Reads scale out, writes stay safe.'),
     o('Shard it now', false, 'Huge complexity for a read problem.'),
@@ -95,7 +95,7 @@ export const CARDS = {
 export const PUZZLES = {
   flow: {
     kind: 'order', icon: '🧭', title: 'Happy path', text: 'Tap the checkout steps in order.',
-    items: ['Add to cart', 'Create order (pending)', 'Charge with idempotency key', 'Mark order paid', 'Publish OrderPaid event', 'Notify buyer and store'],
+    items: ['Add to cart', 'Create pending order, reserve stock', 'Charge with idempotency key', 'Mark order paid', 'Publish OrderPaid via outbox', 'Notify buyer and store'],
     signal: 'Walked the purchase end to end', flag: 'Shaky on the end-to-end purchase flow',
   },
   contract: {

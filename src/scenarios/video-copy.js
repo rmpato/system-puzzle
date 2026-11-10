@@ -23,7 +23,7 @@ export const CARDS = {
     o('Add more API servers', false, 'Paying compute to move bytes.'),
     o('Store video in Postgres', false, 'Now the DB chokes too.')] },
   bigupload: { icon: '⏳', title: 'Uploads time out', text: '2 GB files through the API.', fix: 'presign', opts: [
-    o('Pre-signed URL, upload to storage', true, 'API only signs, bytes skip it.'),
+    o('Pre-signed resumable upload to storage', true, 'API only signs; resumes on bad networks.'),
     o('Raise the API timeout', false, 'Workers stay tied up.'),
     o('Limit videos to 50 MB', false, 'Creators leave.')] },
   dupjob: { icon: '♻️', title: 'Same video transcoded twice', text: 'Client retried after a timeout.', fix: 'idem', opts: [
@@ -101,7 +101,7 @@ export const PUZZLES = {
     buckets: ['🌐 CDN', '🪣 Object store', '🐘 Postgres', '🧺 Redis'],
     items: [
       { t: 'Hot segments viewers stream', a: 0 },
-      { t: 'Thumbnails sent to viewers', a: 0 },
+      { t: 'Thumbnails sent to viewers', a: 0, why: 'Cached at the edge, bucket is origin' },
       { t: 'Original uploaded file', a: 1 },
       { t: 'All transcoded renditions', a: 1, why: 'The origin the CDN pulls from' },
       { t: 'Title, owner, status', a: 2 },

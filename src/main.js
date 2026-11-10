@@ -184,6 +184,7 @@ function buildWorld(scenario) {
       rec.mesh = m.mesh;
       rec.h = m.h + 0.9;
       rec.label = label(g, tag(n.id, n, n.label), rec.h, 'lbl' + (n.model === 'external' ? ' ext' : ''));
+      if (n.model === 'external' && !/external/i.test(n.label)) { rec.extTag = true; rec.label.insertAdjacentHTML('afterbegin', '<span class="xt">external</span>'); }
     }
     world.add(g);
     W.nodes[n.id] = rec;
@@ -295,7 +296,7 @@ function syncGhosts() {
     g.add(sq, hit);
     g.position.copy(slotFor(s.id, sim.count(s.id)).setY(0));
     const hinted = S.hint[s.id] && !interview();
-    const div = label(g, `<div class="gi">${ico(s.id, s, 'gx big')}${s.name}<br>$${sim.price(s.id)}</div>`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (hinted ? ' hint' : '') + (hotGhost === s.id || hinted ? '' : ' quiet'));
+    const div = label(g, `<div class="gi">${ico(s.id, s, 'gx big')}<span class="gn">+ ${s.name}</span><span class="gp">$${sim.price(s.id)}</span></div>`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (hinted ? ' hint' : '') + (hotGhost === s.id || hinted ? '' : ' quiet'));
     W.ghosts.add(g);
     ghosts[s.id] = { g, div, hit };
   }
@@ -376,12 +377,14 @@ const topOf = (key) => posOf(key, 0, (W.nodes[key]?.h ?? 2.4) + 1);
 
 // ═════════════════════════════════════════════ sim → visuals
 const snapshots = [];
+let lastRace = null;
 function hookSim() {
   sim.on((type, p) => {
     switch (type) {
       case 'spawn': {
         const from = orbPoint(p.from), to = orbPoint(p.to);
         const m = getOrb(orbMats[p.type] || Object.values(orbMats)[0], !!p.ring);
+        if (p.ring && p.race !== lastRace) { lastRace = p.race; floatText(from.clone().setY(from.y + 1.2), '⚔ 2 requests race for one item'); }
         place(m, from);
         live.set(p.id, { m, c: curve(from, to, p.kind === 'event' ? 1.6 : 2.6), r: p });
         break;
@@ -474,6 +477,8 @@ function toast(html) {
 // ═════════════════════════════════════════════ frame loop
 const gaugeColor = (l) => (l > 1 ? '#e5484d' : l > 0.8 ? '#e8930c' : '#1f9d55');
 const gauge = (l) => `<span class="g"><i style="width:${Math.min(100, l * 100)}%;background:${gaugeColor(l)}"></i></span>`;
+// on-board version: the bar plus its number, so nobody has to guess what the bar means
+const gaugeL = (l, text = `${Math.round(l * 100)}% load`) => `<span class="gl">${gauge(l)}<em style="color:${l > 0.8 ? gaugeColor(l) : ''}">${text}</em></span>`;
 function renderLabels() {
   const C = sc.connections;
   const now = performance.now(), el = Math.max(0.25, (now - failT) / 1000);
@@ -488,10 +493,11 @@ function renderLabels() {
     const name = rec.node.label + (id === W.serverNode ? ` ×${serverCount()}` : '');
     rec.label.className = 'lbl' + (load > 1 || isConn || down ? ' warn' : '') + (rec.node.model === 'external' ? ' ext' : '');
     const n = rec.node;
-    rec.label.innerHTML = down ? tag(id, n, `${n.label}: down${S.queued ? ` · 📬 ${S.queued}` : ''}`)
-      : isConn ? tag(id, n, `${sim.connections()}/${C.limit} ${C.label || 'connections'}`, gauge(sim.connections() / C.limit))
+    const extTag = rec.extTag ? '<span class="xt">external</span>' : '';
+    rec.label.innerHTML = extTag + (down ? tag(id, n, `${n.label}: down${S.queued ? ` · 📬 ${S.queued}` : ''}`)
+      : isConn ? tag(id, n, `${sim.connections()}/${C.limit} ${C.label || 'connections'}`, gaugeL(sim.connections() / C.limit, 'connection limit'))
       : load === undefined ? tag(id, n, n.label)
-      : tag(id, n, name, gauge(load));
+      : tag(id, n, name, gaugeL(load)));
     const fr = failRate[id] || 0;
     if (fr >= 0.5) rec.label.innerHTML += `<span class="failing">✕ ${Math.round(fr)}/s failing</span>`;
   }
@@ -586,9 +592,10 @@ requestAnimationFrame(frame);
 // ═════════════════════════════════════════════ HUD & shop
 let legendHtml = '';
 function renderLegend() {
-  legendHtml = Object.values(sc.types).map((t) => `<span><i style="background:${t.color}"></i>${t.name}</span>`).join('')
-    + Object.values(sc.events || {}).map((t) => `<span><i style="background:${t.color}"></i>${t.name}</span>`).join('')
-    + `<span><i style="background:${FAIL_COLOR}"></i>Failed</span>`;
+  const ev = Object.values(sc.events || {});
+  legendHtml = `<b class="lg-h">Requests</b>` + Object.values(sc.types).map((t) => `<span><i style="background:${t.color}"></i>${t.name}</span>`).join('')
+    + `<span><i style="background:${FAIL_COLOR}"></i>Failed</span>`
+    + (ev.length ? `<b class="lg-h">Async events</b>` + ev.map((t) => `<span><i class="ev" style="background:${t.color}"></i>${t.name}</span>`).join('') : '');
 }
 function renderHud() {
   const hud = $('hud');
@@ -761,7 +768,7 @@ addEventListener('keydown', (e) => { if (e.key === 'Escape') closeInspector(); }
 canvas.addEventListener('pointermove', (e) => {
   if (e.buttons) return;
   const hit = pickGhost(e);
-  canvas.style.cursor = hit ? 'pointer' : 'grab';
+  canvas.style.cursor = hit || pickPart(e) ? 'pointer' : 'grab';
   if (hit !== hotGhost && !(hotGhost && sim.item(hotGhost)?.trap)) setHotGhost(hit);
 });
 function pickGhost(e) {

@@ -29,7 +29,7 @@ export default {
     { id: 'server', icon: '🖥️', name: 'Chat server', cost: 110, costStep: 0.15, max: 8, desc: '+8 msg/s', scales: 'api' },
     { id: 'ws', icon: '📡', name: 'WS gateway', cost: 150, desc: 'Push over open sockets', model: 'ring', color: '#9fdcff', pos: [-9.5, 0], label: 'WS gateway', symptom: 'type:sync', relieves: 'api' },
     { id: 'dbnode', icon: '🗄️', name: 'DB node', cost: 200, costStep: 0.2, max: 2, desc: '+12 writes/s', model: 'cyl', color: '#ffe6c2', slots: [[12.8, -3.8], [12.8, 3.8]], label: 'Node', scales: 'db' },
-    { id: 'cdn', icon: '🌐', name: 'S3 + CDN', cost: 160, desc: 'Media skips chat servers', model: 'cloud', pos: [-10, -7], label: 'S3 + CDN', symptom: 'type:media', relieves: 'api' },
+    { id: 'cdn', icon: '🌐', name: 'Storage + CDN', cost: 160, desc: 'Media skips chat servers', model: 'cloud', pos: [-10, -7], label: 'Storage + CDN', symptom: 'type:media', relieves: 'api' },
     { id: 'presence', icon: '🟢', name: 'Presence TTL', cost: 130, desc: 'Typing & online in memory', model: 'sphere', color: '#b6f2c8', pos: [-2, -7], label: 'Presence (TTL)', symptom: 'type:presence', relieves: 'db' },
     { id: 'cache', icon: '🧺', name: 'Msg cache', cost: 160, desc: 'Recent messages in Redis', model: 'box', color: '#ffb3b3', pos: [4, -6], label: 'Recent cache', symptom: 'hot:db', proactive: 2 },
     { id: 'idem', icon: '🔑', name: 'Client msg ID', cost: 120, desc: 'Retries never duplicate', model: 'key', color: '#ffd76a', pos: [-7.5, 5], label: 'Message IDs', symptom: 'hazard:duplicate', proactive: 1 },

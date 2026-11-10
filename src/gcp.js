@@ -62,7 +62,7 @@ const MAP = {
   trend: ['dataflow', 'async'], logs: ['cloud-logging', 'async'], recon: ['cloud-scheduler', 'async'],
   // edge
   cdn: ['cloud-cdn', 'edge'], ratelimit: ['cloud-armor', 'edge'], shield: ['cloud-armor', 'edge'],
-  region: ['load-balancing', 'edge'], multi: ['load-balancing', 'edge'], ws: ['api-gateway', 'edge'], mesh: ['service-mesh', 'edge'],
+  region: ['load-balancing', 'edge'], multi: ['load-balancing', 'edge'], ws: ['compute-engine', 'edge'], mesh: ['service-mesh', 'edge'],
   maps: ['maps', 'edge'], quota: ['maps', 'edge'], owncdn: [null, 'edge'], ownpush: [null, 'edge'], waitroom: [null, 'edge'],
   // ai
   personal: ['vertex-ai', 'ai'], ranker: ['vertex-ai', 'ai'], ml: ['vertex-ai', 'ai'], risk: ['vertex-ai', 'ai'],

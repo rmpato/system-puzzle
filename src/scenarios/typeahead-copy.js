@@ -32,7 +32,7 @@ export const CARDS = {
     o('Rebuild the whole trie every minute', false, 'Huge cost for a few new terms.'),
     o('Fall back to a DB scan', false, 'Slow, and melts the DB.')] },
   surge: { icon: '🚨', title: 'Breaking news!', text: 'One term, ×3 traffic, right now.', fix: 'trend', opts: [
-    o('Edge cache + trending merge', true, 'Hot and fresh, no DB.'),
+    o('Short-TTL edge cache + trending merge', true, 'Hot and fresh, no DB.'),
     o('Scale servers ×10 instantly', false, 'Slow to boot, still stale.'),
     o('Turn suggestions off', false, 'Search box feels broken.')] },
   logsdown: { icon: '📉', title: 'Log pipeline is down', text: 'Searches keep coming. Logs lost?', fix: 'queue', opts: [
@@ -46,7 +46,7 @@ export const CARDS = {
   offensive: { icon: '🙊', title: 'Offensive suggestion spotted', text: 'Screenshots are spreading.', opts: [
     o('Blocklist at build + live kill switch', true, 'Clean trie, instant removal.'),
     o('Retrain the ranking model', false, 'Takes days. It\'s live now.'),
-    o('Let users report it', false, 'Damage is already done.')] },
+    o('Let users report it', false, 'Useful signal, but too slow alone.')] },
   // whiteboard cards
   debounce: { icon: '⏱️', title: 'Typing "weather" = 7 calls', text: 'Most results are never seen.', fix: 'debounce', opts: [
     o('Debounce ~150 ms, min 2 chars', true, 'Fewer calls, same feel.'),
@@ -59,7 +59,7 @@ export const CARDS = {
   like: { icon: '🐘', title: 'Why not SQL LIKE?', text: '"LIKE \'ab%\' uses an index."', opts: [
     o('Still scans + sorts matches per key', true, 'Short prefixes match millions.'),
     o('LIKE is fine at any scale', false, '"a%" matches everything.'),
-    o('Use LIKE \'%ab%\' instead', false, 'No index at all.')] },
+    o('Use LIKE \'%ab%\' instead', false, 'Leading wildcard: no B-tree index.')] },
   fresh: { icon: '♻️', title: 'Rebuild the trie how often?', text: 'Freshness vs cost.', opts: [
     o('Daily batch + real-time trending', true, 'Cheap base, fresh where it matters.'),
     o('Rebuild on every search', false, 'Rebuild cost × billions.'),

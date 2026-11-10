@@ -30,7 +30,7 @@ export const CARDS = {
   celeb: { icon: '⭐', title: 'A celebrity posted', text: '5M followers = 5M timeline writes.', fix: 'hybrid', opts: [
     o('Hybrid: merge celeb posts at read', true, 'Few celebs, pulled on demand.'),
     o('Add fan-out workers', false, 'Next celebrity melts it again.'),
-    o('Fan out to everyone anyway', false, 'Minutes of lag, hot keys.')] },
+    o('Fan out to everyone anyway', false, 'Millions of writes, minutes of lag.')] },
   double: { icon: '👯', title: 'Post appeared twice', text: 'App retried on flaky 4G.', fix: 'idem', opts: [
     o('Idempotency key per post', true, 'Retry returns the same post.'),
     o('Disable the button', false, 'Network retries still duplicate.'),
@@ -99,10 +99,10 @@ export const PUZZLES = {
   },
   storage: {
     kind: 'sort', icon: '🔀', title: 'Where does it live?', text: 'Pick a store for each.',
-    buckets: ['⚡ Redis', '🐘 Postgres', '🪣 S3 + CDN'],
+    buckets: ['⚡ Redis', '🐘 Postgres', '🪣 Storage + CDN'],
     items: [
       { t: 'Home timeline (post IDs)', a: 0 },
-      { t: 'Like counters', a: 0, why: 'INCR, flushed in batches' },
+      { t: 'Like counters', a: 0, why: 'INCR, flushed to Postgres in batches' },
       { t: 'Posts', a: 1 },
       { t: 'Follow graph', a: 1 },
       { t: 'Photos', a: 2 },
