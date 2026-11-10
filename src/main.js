@@ -25,6 +25,7 @@ let ac = null, muted = store.get('sp-muted', false);
 let mode = store.get('sp-mode', 'practice'); // practice: answers explained · interview: answers hidden until the debrief
 const interview = () => mode === 'interview';
 let speed = 1;
+{ const q = new URLSearchParams(location.search); if (q.has('debug') && +q.get('speed') > 0) speed = Math.min(8, +q.get('speed')); } // QA only: ?debug&speed=4
 const review = []; // every answer, for the debrief
 const lastSfx = {};
 function tone(freq, dur = 0.08, type = 'sine', vol = 0.05, delay = 0) {
@@ -535,6 +536,14 @@ function hookSim() {
         break;
       }
       case 'break': showCurrent(); break;
+      case 'missing': { // traffic hit a part that doesn't exist: name it, mark its empty slot, point at the fix
+        const n = W.nodes[p.node];
+        if (n) ripple(n.pos, FAIL_COLOR);
+        toast(`<div class="imp-h"><span><b>⚠ ${p.text}</b><small>Add it from “Your system” in the parts bar · $${p.cost}</small></span></div>`, 'bad', 7000);
+        sfx('bad');
+        shopSig = ''; renderShop();
+        break;
+      }
       case 'design': renderHud(); break;
       case 'phase': phaseBanner(); if (S.queue.length && !incident) showCurrent(); break;
       case 'surge': if (p.on) surgeBanner(p); renderHud(); break;
@@ -768,26 +777,40 @@ function renderLegend() {
     + `<span><i style="background:${FAIL_COLOR}"></i>Failed</span>`
     + (ev.length ? `<b class="lg-h">Async events</b>` + ev.map((t) => `<span><i class="ev" style="background:${t.color}"></i>${t.name}</span>`).join('') : '');
 }
+// The HUD is built once per game; updates only touch text and attributes, so its buttons are never replaced
+// under the cursor (a click whose press and release land on different elements is silently lost).
 function renderHud() {
   const hud = $('hud');
   hud.hidden = !playing();
   if (!playing()) return;
+  if (hud.dataset.sc !== sc.id) {
+    hud.dataset.sc = sc.id;
+    hud.innerHTML = `
+      <div class="hud-stats"></div>
+      <div class="spacer"></div>
+      <div class="note legend top">${legendHtml}</div>
+      <div class="note hud-tools">
+        <button class="iconbtn" data-learn-open aria-label="Field guide (pauses)" title="Field guide (pauses)">${ICON.book}</button>
+        <button class="iconbtn" id="speedBtn" aria-label="Speed" title="Speed"></button>
+        <button class="iconbtn" id="pauseBtn" title="Pause (Space)"></button>
+        <button class="iconbtn" id="muteBtn" title="Sound (M)"></button>
+      </div>`;
+  }
   const P = sc.phases[S.phase];
   const r = Math.round(S.moneyRate);
-  hud.innerHTML = `
-    <div class="note stat" id="phase"><small>${sc.icon} ${sc.title} · phase ${S.phase + 1} of ${sc.phases.length}</small><b>${P.name}${S.surging ? ' <span class="surge">📈 surge</span>' : ''}</b>
-      <div class="phases">${sc.phases.map((p, i) => `<i class="${i < S.phase ? 'done' : i === S.phase ? 'now' : ''}" style="flex:${p.dur}" title="${p.name}"><b style="width:${i < S.phase ? 100 : i === S.phase ? Math.min(100, (S.phaseTime / p.dur) * 100) : 0}%"></b>${p.surge ? `<em style="left:${(p.surge.at / p.dur) * 100}%" title="${p.surge.label || 'Surge'}">⚡</em>` : ''}</i>`).join('')}</div></div>
-    <div class="note stat"><small>Budget</small><b style="color:${S.money < 0 ? 'var(--bad)' : 'var(--ink)'}">$${Math.floor(S.money)}</b>${r ? `<span class="rate ${r > 0 ? 'up' : 'down'}">${r > 0 ? '+' : ''}${r}/s</span>` : ''}</div>
-    <div class="note stat ${S.rep < 35 ? 'low' : ''}" id="rep"><small>Reputation</small><b>${Math.round(S.rep)}</b><div class="bar"><i style="width:${Math.max(0, S.rep)}%"></i></div></div>
-    <div class="spacer"></div>
-    <div class="note legend top">${legendHtml}</div>
-    <div class="note hud-tools">
-      <button class="iconbtn" data-learn-open aria-label="Field guide (pauses)" title="Field guide (pauses)">${ICON.book}</button>
-      <button class="iconbtn" id="speedBtn" aria-label="Speed" title="Speed">${speed === 1 ? '1×' : '2×'}</button>
-      <button class="iconbtn" id="pauseBtn" aria-label="${S.userPaused ? 'Resume' : 'Pause'}" title="Pause (Space)">${S.userPaused ? ICON.play : ICON.pause}</button>
-      <button class="iconbtn" id="muteBtn" aria-label="${muted ? 'Unmute' : 'Mute'}" title="Sound (M)">${muted ? ICON.mute : ICON.sound}</button>
-    </div>
-  `;
+  const design = S.mode === 'design';
+  hud.querySelector('.hud-stats').innerHTML = `
+    <div class="note stat" id="phase"><small>${sc.icon} ${sc.title} · ${design ? 'design' : `phase ${S.phase + 1} of ${sc.phases.length}`}</small><b>${design ? 'First version' : P.name}${S.surging ? ' <span class="surge">📈 surge</span>' : ''}</b>
+      <div class="phases">${sc.phases.map((p, i) => `<i class="${i < S.phase ? 'done' : i === S.phase && !design ? 'now' : ''}" style="flex:${p.dur}" title="${p.name}"><b style="width:${i < S.phase ? 100 : i === S.phase && !design ? Math.min(100, (S.phaseTime / p.dur) * 100) : 0}%"></b>${p.surge ? `<em style="left:${(p.surge.at / p.dur) * 100}%" title="${p.surge.label || 'Surge'}">⚡</em>` : ''}</i>`).join('')}</div></div>
+    <div class="note stat"><small>Budget</small><b style="color:${S.money < 0 ? 'var(--bad)' : 'var(--ink)'}">$${Math.floor(S.money)}</b>${r && !design ? `<span class="rate ${r > 0 ? 'up' : 'down'}">${r > 0 ? '+' : ''}${r}/s</span>` : ''}</div>
+    <div class="note stat ${S.rep < 35 ? 'low' : ''}" id="rep"><small>Reputation</small><b>${Math.round(S.rep)}</b><div class="bar"><i style="width:${Math.max(0, S.rep)}%"></i></div></div>`;
+  const sp = $('speedBtn'), pa = $('pauseBtn'), mu = $('muteBtn');
+  const set = (el, html, label) => { if (el.dataset.v !== html) { el.dataset.v = html; el.innerHTML = html; } if (label) el.setAttribute('aria-label', label); };
+  set(sp, speed === 1 ? '1×' : '2×');
+  set(pa, S.userPaused ? ICON.play : ICON.pause, S.userPaused ? 'Resume' : 'Pause');
+  set(mu, muted ? ICON.mute : ICON.sound, muted ? 'Unmute' : 'Mute');
+  pa.disabled = S.mode !== 'play';
+  sp.disabled = S.mode !== 'play';
 }
 $('hud').addEventListener('click', (e) => {
   if (e.target.closest('[data-learn-open]')) openLearn();
@@ -828,30 +851,42 @@ function overloadHints() {
   }
   return out;
 }
+// The parts bar is built once per game; every update patches each tile in place (classes, price, wait,
+// progress) instead of re-rendering, so a click is never lost to a tile being replaced mid-press.
 function renderShop() {
   const shop = $('shop');
   shop.hidden = !playing();
   if (!playing()) return;
   const pct = (s) => Math.max(0, Math.min(100, Math.round((S.money / Math.max(1, sim.price(s.id))) * 20) * 5));
   uiHint = overloadHints();
-  const sig = sc.shop.map((s) => [sim.count(s.id), sim.price(s.id), sim.affordable(s.id), sim.onCredit(s.id), waitFor(s.id), pct(s), !!S.hint[s.id], uiHint.has(s.id)].join()).join('|');
+  const sig = S.mode + '|' + sc.shop.map((s) => [sim.count(s.id), sim.price(s.id), sim.affordable(s.id), sim.canBuy(s.id), sim.onCredit(s.id), waitFor(s.id), pct(s), !!S.hint[s.id], uiHint.has(s.id)].join()).join('|');
   if (sig === shopSig) return;
   shopSig = sig;
-  const tile = (s) => {
-    const i = shopOrder.indexOf(s);
+  if (shop.dataset.sc !== sc.id) {
+    shop.dataset.sc = sc.id;
+    shop.innerHTML = CATS.map(([c, name]) => {
+      const list = shopOrder.filter((s) => gcpOf(sc, s.id, s).cat === c);
+      return list.length ? `<div class="grp ${c === 'core' ? 'core' : ''}"><div class="grp-l">${name}</div><div class="grp-i">${list.map((s) => {
+        const i = shopOrder.indexOf(s);
+        return `<button class="item" data-id="${s.id}">${i < 9 ? `<span class="k">${i + 1}</span>` : ''}<span class="ic">${ico(s.id, s, 'gx')}</span><span class="n" hidden></span><b>${s.name}</b><span class="p"></span><i class="wait" hidden></i><span class="fill" hidden><i></i></span></button>`;
+      }).join('')}</div></div>` : '';
+    }).join('');
+  }
+  for (const el of shop.querySelectorAll('.item')) {
+    const s = sim.item(el.dataset.id);
     const n = sim.count(s.id), max = s.max || 1, price = sim.price(s.id);
-    const done = n >= max, poor = !done && !sim.affordable(s.id), credit = !done && sim.onCredit(s.id), wait = poor ? waitFor(s.id) : 0;
-    return `<button class="item ${s.trap ? 'trap' : ''} ${done ? 'done' : ''} ${poor ? 'poor' : ''} ${credit ? 'credit' : ''} ${(S.hint[s.id] || uiHint.has(s.id)) && !done && !interview() ? 'hint' : ''}" data-id="${s.id}" aria-disabled="${done || poor}" aria-label="${s.name}, $${price}">
-      ${i < 9 ? `<span class="k">${i + 1}</span>` : ''}<span class="ic">${ico(s.id, s, 'gx')}</span>${max > 1 && n ? `<span class="n">×${n}</span>` : ''}
-      <b>${s.name}</b>
-      <span class="p">${done ? '✓ built' : credit ? `💳 $${price}` : price === 0 ? 'free' : `$${price}`}</span>${wait ? `<i class="wait">⏱ ${wait}s</i>` : ''}
-      ${poor ? `<span class="fill"><i style="width:${pct(s)}%"></i></span>` : ''}
-    </button>`;
-  };
-  shop.innerHTML = CATS.map(([c, name]) => {
-    const list = shopOrder.filter((s) => gcpOf(sc, s.id, s).cat === c);
-    return list.length ? `<div class="grp ${c === 'core' ? 'core' : ''}"><div class="grp-l">${name}</div><div class="grp-i">${list.map(tile).join('')}</div></div>` : '';
-  }).join('');
+    const done = n >= max, blocked = !done && !sim.canBuy(s.id) && sim.affordable(s.id);
+    const poor = !done && !sim.affordable(s.id), credit = !done && sim.onCredit(s.id), wait = poor ? waitFor(s.id) : 0;
+    const hint = (S.hint[s.id] || uiHint.has(s.id)) && !done && !interview();
+    el.className = `item${s.trap ? ' trap' : ''}${done ? ' done' : ''}${poor || blocked ? ' poor' : ''}${credit ? ' credit' : ''}${hint ? ' hint' : ''}`;
+    el.setAttribute('aria-disabled', String(done || poor || blocked));
+    el.setAttribute('aria-label', `${s.name}, ${price === 0 ? 'free' : `$${price}`}`);
+    el.querySelector('.p').textContent = done ? '✓ built' : credit ? `💳 $${price}` : price === 0 ? 'free' : `$${price}`;
+    const nEl = el.querySelector('.n'); nEl.hidden = !(max > 1 && n); nEl.textContent = `×${n}`;
+    const w = el.querySelector('.wait'); w.hidden = !wait; w.textContent = `⏱ ${wait}s`;
+    const f = el.querySelector('.fill'); f.hidden = !poor; f.firstElementChild.style.width = `${pct(s)}%`;
+    el.title = blocked && s.scales ? `Build the ${plain(W.nodes[sc.pools[s.scales].node]?.node.label || 'part')} first` : '';
+  }
   syncGhosts();
 }
 // Seconds until an unaffordable item is affordable at the current income rate (0 = unknown / too far).
@@ -899,7 +934,7 @@ function pickPart(e) {
   if (!playing()) return null;
   ptr.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
   ray.setFromCamera(ptr, camera);
-  const groups = [...Object.values(W.nodes).map((r) => r.group), ...Object.values(W.items).flat().map((x) => x.group)];
+  const groups = [...Object.values(W.nodes).filter((r) => r.group.visible).map((r) => r.group), ...Object.values(W.items).flat().map((x) => x.group)]; // unbuilt parts are hidden: not clickable
   for (const h of ray.intersectObjects(groups, true)) {
     let o = h.object;
     while (o && o.userData.inspect === undefined) o = o.parent;
@@ -1060,15 +1095,16 @@ const cont = (labelText = 'Continue', reward = '') => `<div class="row"><span cl
 function bindCont() {
   const b = $('cont');
   b.focus({ preventScroll: true });
-  b.addEventListener('click', () => { closeModal(); sim.next(); shopSig = ''; renderShop(); maybeCoach(); });
+  b.addEventListener('click', () => { closeModal(); sim.next(); shopSig = ''; renderShop(); });
 }
 // First game ever: once the opening question is answered, point at the shop for a few seconds.
+// First game ever: at the design step, point at where the parts are.
 function maybeCoach() {
-  if (S.mode !== 'play' || S.phase !== 0 || store.get('sp-coached', false)) return;
+  if (S.mode !== 'design' || store.get('sp-coached', false)) return;
   store.set('sp-coached', true);
   const n = document.createElement('div');
-  n.className = 'coach';
-  n.innerHTML = '👇 Buy parts here <span>or click a dashed slot on the board</span>';
+  n.className = 'coach left';
+  n.innerHTML = '👇 Start here: add your parts <span>click a part, or press its number key</span>';
   document.body.appendChild(n);
   setTimeout(() => n.classList.add('out'), 6500);
   setTimeout(() => n.remove(), 7200);
@@ -1165,7 +1201,7 @@ function closeIncident() {
   incidentCalm = performance.now() + 2500;
   closeModal();
   sim.next(); // shows the next queued incident, if any
-  shopSig = ''; renderShop(); maybeCoach();
+  shopSig = ''; renderShop();
 }
 
 // ── the opening design question: asked before launch, so play never starts with an interruption.
@@ -1214,6 +1250,7 @@ function enterDesign() {
   modal.classList.add('left');
   $('launch').addEventListener('click', launchDesign);
   renderFlows();
+  maybeCoach();
 }
 // the path of a request type through the board: users → each part that does work → where its event goes
 function flowOf(t) {
@@ -1429,16 +1466,16 @@ function briefScreen() {
     <div class="eyebrow">${sc.icon} ${sc.difficulty} · ${interview() ? 'Interview mode' : 'Practice mode'} · ~${Math.round((sc.phases.reduce((a, p) => a + p.dur, 0) + 240) / 60)} min</div>
     <h1>${sc.title}</h1>
     <div class="brief hand">${sc.brief}</div>
-    <h3 class="howto-title">How to read the board</h3>
+    <h3 class="howto-title">How it works</h3>
     <div class="howto">
-      <div><span class="dotrow"><i style="background:#2f6fed"></i><i style="background:#1f9d55"></i><i style="background:#e8930c"></i></span><b>Dots are requests</b>flowing from users through your parts</div>
-      <div><span class="dotrow"><i style="background:#e5484d"></i></span><b>Red dot</b>a request that failed</div>
-      <div><span class="tagdemo">⚠ Postgres</span><b>Red label</b>that part is overloaded</div>
-      <div><span class="slotdemo"></span><b>Dashed square</b>where a part you can buy goes</div>
+      <div><span class="slotdemo"></span><b>You build it</b>The board starts empty. You design the first version, then grow it</div>
+      <div><span class="dotrow"><i style="background:#2f6fed"></i><i style="background:#1f9d55"></i><i style="background:#e8930c"></i></span><b>Dots are requests</b>flowing from your users through your parts</div>
+      <div><span class="ringdemo"></span><b>Rings show load</b>green, then amber, then red when a part is overloaded</div>
+      <div><span class="dotrow"><i style="background:#e5484d"></i></span><b>Red dots fail</b>they cost reputation. Fix the cause, not the symptom</div>
     </div>
     <div class="legend wide">${legendHtml}</div>
     <p class="inspect-hint">🔎 Click any part on the board to see its Google Cloud product, load and capacity.</p>
-    <div class="row"><span class="grow"><button class="link" id="back">← All exercises</button></span><button class="btn" id="go">Start interview</button></div>
+    <div class="row"><span class="grow"><button class="link" id="back">← All exercises</button></span><button class="btn" id="go">Start</button></div>
   `);
   $('go').focus({ preventScroll: true });
   $('back').addEventListener('click', toPicker);

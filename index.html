@@ -119,6 +119,9 @@
   /* ── HUD: an instrument strip */
   #hud { position: fixed; top: max(14px, env(safe-area-inset-top, 0px)); left: var(--gap-l); right: var(--gap-r); display: flex; gap: 8px; align-items: stretch; pointer-events: none; z-index: 5; }
   #hud[hidden] { display: none; }
+  .hud-stats { display: contents; }
+  .iconbtn:disabled { opacity: .35; cursor: default; }
+  .iconbtn:disabled:hover { background: transparent; }
   .note { background: rgba(255,255,255,.92); border: 1px solid var(--hair); border-radius: 14px; box-shadow: var(--shadow); padding: 9px 14px; backdrop-filter: blur(10px) saturate(1.2); }
   .stat small { display: block; font: 500 10px/1.2 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
   .stat > b { display: inline-block; min-width: 3.2ch; font: 500 24px/1 var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
@@ -127,6 +130,7 @@
   .bar { height: 4px; border-radius: 3px; background: var(--paper-3); margin-top: 7px; overflow: hidden; }
   .bar i { display: block; height: 100%; background: var(--ink); transition: width .3s; }
   #phase { min-width: 290px; }
+  #phase > b { font: 600 24px/1 var(--font-display); letter-spacing: -.025em; }
   .phases { display: flex; gap: 3px; margin-top: 9px; }
   .phases i { position: relative; height: 4px; border-radius: 3px; background: var(--paper-3); }
   .phases i b { display: block; height: 100%; border-radius: 3px; background: var(--ink); transition: width .3s; }
@@ -358,6 +362,8 @@
   .dotrow { display: flex; gap: 4px; height: 22px; align-items: center; }
   .dotrow i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
   .tagdemo { justify-self: start; font: 700 13px var(--font-hand); color: var(--bad); background: #fff0ec; border: 1px solid var(--bad); border-radius: 6px; padding: 1px 6px; height: 22px; }
+  .ringdemo { width: 22px; height: 22px; border-radius: 50%; background: conic-gradient(var(--good) 0 45%, var(--warn) 45% 70%, var(--bad) 70% 85%, var(--paper-3) 85%); -webkit-mask: radial-gradient(circle, transparent 6px, #000 6.5px); mask: radial-gradient(circle, transparent 6px, #000 6.5px); }
+  .coach.left { left: 200px; transform: rotate(-1.5deg); }
   .slotdemo { width: 34px; height: 22px; border: 1.5px dashed var(--muted); border-radius: 3px; }
   .inspect-hint { margin: 12px 0 0; text-align: center; font-size: 13px; color: var(--muted); }
 
@@ -424,6 +430,8 @@
   .imp li.down::before { content: '−'; color: var(--bad); }
   .imp-why { margin: 8px 0 0; padding: 8px 10px; background: #fff6e3; border-radius: 8px; font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
   .toast.trap { border-color: var(--warn); }
+  .toast.bad { border-color: var(--bad); border-left: 3px solid var(--bad); }
+  .toast.bad b { color: var(--bad); }
 
   /* inspector */
   #insp { position: fixed; z-index: 8; width: 280px; padding: 14px 16px 15px; pointer-events: auto; animation: pop .25s var(--ease-out); }
@@ -795,6 +803,9 @@
 <div id="pause" hidden>paused</div>
 <div id="modal" hidden></div>
 <div id="home" hidden></div>
+<!-- Bun bundles three from node_modules; the import map below only matters when the folder is served as
+     plain files (e.g. python3 -m http.server), so the game works either way. -->
+<script type="importmap">{ "imports": { "three": "/node_modules/three/build/three.module.js", "three/addons/": "/node_modules/three/examples/jsm/" } }</script>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

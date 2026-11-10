@@ -4,16 +4,19 @@ System-design interview practice as a 3D whiteboard game (Three.js). Pick an exe
 
 ## Run
 
-A [Bun](https://bun.sh) app.
+A [Bun](https://bun.sh) app. Live preview: https://rmpato.github.io/system-puzzle/
 
 ```bash
 bun install
 bun run dev        # http://localhost:5199, hot reload (PORT=… to change)
 bun start          # same server in production mode
 bun run build      # static site in dist/ (any static host)
+bun run deploy:pages  # build for GitHub Pages and publish the preview
 ```
 
 Three.js comes from npm and is bundled by Bun; only the fonts load from the internet. Desktop browser.
+
+After `bun install`, the folder also works from any plain static server (`python3 -m http.server 5199`): an import map in `index.html` points `three` at `node_modules`. Use `bun run dev` for the full experience, since a plain server can't serve deep links like `/play/<id>` on reload.
 
 ### URLs
 

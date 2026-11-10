@@ -99,6 +99,13 @@ export function createSim(scIn, { random = Math.random, tuning = {} } = {}) {
     S.firsts[key] = S.time;
     if (text) log('event', text, tone);
   };
+  // the first time traffic reaches a part that was never built, say so on screen (not just in the log)
+  const missing = (node, text) => {
+    if (S.firsts[`missing:${node}`] !== undefined) return;
+    first(`missing:${node}`, text);
+    S.hint[`core:${node}`] = true; // practice mode lights it up in the parts bar
+    emit('missing', { node, text, cost: price(`core:${node}`) });
+  };
 
   // ── setup
   function ask(indices) {
@@ -298,7 +305,7 @@ export function createSim(scIn, { random = Math.random, tuning = {} } = {}) {
       if (!placed(P.node)) {
         S.counts.unbuilt++;
         fail(r, P.node);
-        first(`missing:${P.node}`, `Nothing handles ${TYPES[r.type].name.toLowerCase()} requests: there is no ${strip(nodeById[P.node].label)}`);
+        missing(P.node, `Nothing handles ${TYPES[r.type].name.toLowerCase()} requests: there is no ${strip(nodeById[P.node].label)}`);
         return;
       }
       if (P.conn && connBad()) { fail(r, P.node); first('conn', C.firstText || 'Database refused connections'); trigger(C.card); return; }
@@ -363,7 +370,7 @@ export function createSim(scIn, { random = Math.random, tuning = {} } = {}) {
     if (!placed(r.to)) { // e.g. click stats with no analytics store: the data has nowhere to go
       S.counts.unbuilt++;
       S.rep -= T.failRep;
-      first(`missing:${r.to}`, `${ev.name || 'Events'} have nowhere to go: there is no ${strip(nodeById[r.to].label)}`);
+      missing(r.to, `${ev.name || 'Events'} have nowhere to go: there is no ${strip(nodeById[r.to].label)}`);
       emit('resolve', { r, ok: false, where: r.to });
       return;
     }
