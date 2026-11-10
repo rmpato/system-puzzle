@@ -1,0 +1,16 @@
+{
+  "name": "under-load",
+  "private": true,
+  "type": "module",
+  "description": "System design interview practice: build the architecture while live traffic flows through it.",
+  "scripts": {
+    "dev": "bun --hot server.ts",
+    "start": "NODE_ENV=production bun server.ts",
+    "build": "bun tools/build.ts",
+    "validate": "bun tools/validate.mjs",
+    "balance": "bun tools/balance.mjs"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  }
+}

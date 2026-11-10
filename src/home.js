@@ -1,11 +1,14 @@
-// Home: the landing page. A live blueprint hero, the nine exercises as numbered drawing sheets,
-// how a round works, and a door into the field manual. Pure DOM, no scenario specifics beyond the registry.
+// Home: the exercise picker. One screen, two panes.
+// Left: what this is, and the nine prompts as a list (easiest first).
+// Right: the selected prompt as the interviewer would put it on the whiteboard: the question,
+// the system you start with, the traffic you will face (drawn from the scenario's phases), and Start.
+// Pure DOM, everything derived from the scenario registry.
 import { SCENARIOS } from './scenarios/index.js';
-import { gcpOf } from './gcp.js';
-import { CONCEPTS, GROUPS } from './learn.js';
+import { model, stageHtml, runStage } from './stage.js';
+import { CONCEPTS } from './learn.js';
 
 const pad = (n) => String(n).padStart(2, '0');
-const DIFF = { easy: 1, medium: 2, hard: 3, expert: 4 };
+const strip = (h) => String(h).replace(/<[^>]*>/g, '').trim();
 
 export const ICON = {
   arrow: '<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
@@ -16,216 +19,207 @@ export const ICON = {
   mute: '<svg class="i" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/></svg>',
   close: '<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   back: '<svg class="i" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
-  mark: '<svg class="logo-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="26" height="26" rx="2"/><rect x="5" y="5" width="7" height="5" rx="1"/><rect x="16" y="5" width="7" height="5" rx="1"/><rect x="10.5" y="18" width="7" height="5" rx="1" fill="#2448f5" stroke="#2448f5"/><path d="M8.5 10v4h11v-4M14 14v4"/></svg>',
+  // three boxes and two wires: the smallest possible architecture diagram
+  mark: '<svg class="logo-mark" viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><rect x="2" y="3" width="9" height="7" rx="1.5"/><rect x="17" y="3" width="9" height="7" rx="1.5"/><rect x="9.5" y="18" width="9" height="7" rx="1.5" fill="var(--blue)" stroke="var(--blue)"/><path d="M6.5 10v3.5h15V10M14 13.5V18"/></svg>',
 };
 
-// ── the live blueprint (hero). Coordinates are in a 520×520 drawing.
-const NODES = [
-  { x: 36, y: 40, t: 'Users', p: 'clients', ic: null, cls: 'users', emo: '👥' },
-  { x: 350, y: 40, t: 'Cloud CDN', p: 'edge · static', ic: 'cloud-cdn' },
-  { x: 193, y: 140, t: 'Load balancer', p: 'L7 · global', ic: 'load-balancing' },
-  { x: 36, y: 250, t: 'API', p: 'stateless · 1', ic: 'cloud-run' },
-  { x: 193, y: 250, t: 'API', p: 'stateless · 2', ic: 'cloud-run' },
-  { x: 350, y: 250, t: 'API', p: 'stateless · 3', ic: 'cloud-run' },
-  { x: 36, y: 360, t: 'Memorystore', p: 'cache · 90% hit', ic: 'memorystore', cls: 'cache' },
-  { x: 193, y: 360, t: 'Cloud SQL', p: 'primary', ic: 'cloud-sql' },
-  { x: 350, y: 360, t: 'Pub/Sub', p: 'async · clicks', ic: 'pubsub' },
-];
-const WIRES = [
-  ['w1', 'M103 86 V113 H260 V140'],
-  ['w2', 'M260 186 V218 H103 V250'],
-  ['w3', 'M260 186 V250'],
-  ['w4', 'M260 186 V218 H417 V250'],
-  ['w5', 'M103 296 V360'],
-  ['w6', 'M260 296 V360'],
-  ['w7', 'M417 296 V360'],
-  ['w8', 'M260 296 V328 H133 V360'],
-];
-// packets: [wire, color, duration, delay]
-const PACKETS = [
-  ['w1', '#2448f5', 1.4, 0], ['w1', '#12804a', 1.4, .5], ['w1', '#2448f5', 1.4, 1],
-  ['w2', '#2448f5', 1.2, .3], ['w3', '#12804a', 1.0, .8], ['w4', '#2448f5', 1.2, 1.2], ['w4', '#7c4dff', 1.2, .1],
-  ['w5', '#2448f5', .8, .6], ['w5', '#2448f5', .8, 1.5], ['w8', '#2448f5', 1, 1.1],
-  ['w6', '#12804a', .9, 1.6], ['w7', '#7c4dff', .9, .9],
-];
-function plate() {
-  const node = (n, i) => `<g class="nd ${n.cls || ''}" style="animation-delay:${0.25 + i * 0.07}s">
-      <rect x="${n.x}" y="${n.y}" width="134" height="46" rx="8"/>
-      ${n.ic ? `<image href="./assets/gcp/${n.ic}.svg" x="${n.x + 10}" y="${n.y + 11}" width="24" height="24"/>` : `<text x="${n.x + 22}" y="${n.y + 30}" text-anchor="middle" style="font-size:18px">${n.emo}</text>`}
-      <text x="${n.x + 42}" y="${n.y + 21}">${n.t}</text><text class="pd" x="${n.x + 42}" y="${n.y + 34}">${n.p.toUpperCase()}</text></g>`;
-  return `<div class="plate" aria-hidden="true">
-    <div class="plate-grid"></div>
-    <span class="tag">Fig. 1 · A URL shortener at 12k req/s</span>
-    <svg viewBox="0 0 520 520">
-      ${WIRES.map(([id, d], i) => `<path id="${id}" class="wire" d="${d}" style="animation-delay:${0.5 + i * 0.08}s"/>`).join('')}
-      <path class="wire d" d="M170 63 H350"/>
-      ${NODES.map(node).join('')}
-      <g class="ann">
-        <path class="dim" d="M506 40 V406 M500 40 H512 M500 406 H512"/>
-        <text class="dimt" transform="translate(498 300) rotate(-90)">4 TIERS · P99 42 MS</text>
-        <path class="dim" d="M36 244 H170 M36 238 V250 M170 238 V250"/>
-        <text class="dimt" x="40" y="239">N × STATELESS</text>
-        <text class="hnote" x="44" y="452">90% of reads never</text>
-        <text class="hnote" x="44" y="472">touch the database</text>
-        <path class="hstroke" d="M100 436 q-8 -14 0 -26 m-5 6 l5 -6 l5 5"/>
-        <text class="dimt" x="200" y="58" style="fill:var(--muted)">STATIC ASSETS</text>
-      </g>
-      ${PACKETS.map(([w, c, dur, d]) => `<circle class="pk" r="4" opacity="0" fill="${c}"><animateMotion dur="${dur}s" begin="${2 + d}s" repeatCount="indefinite" keyPoints="0;1" keyTimes="0;1" calcMode="linear"><mpath href="#${w}"/></animateMotion><animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.1;.85;1" dur="${dur}s" begin="${2 + d}s" repeatCount="indefinite"/></circle>`).join('')}
-    </svg>
-    <div class="tb"><div><small>Throughput</small><b data-tb="rps">12,480/s</b></div><div><small>Served</small><b data-tb="served">0</b></div><div><small>p99 latency</small><b data-tb="p99">42 ms</b></div><div><small>Errors</small><b>0.00%</b></div></div>
-  </div>`;
+// What each prompt is, in plain words (the titles are playful; this line says what you are designing).
+const SYSTEM = {
+  'url-shortener': 'URL shortener',
+  typeahead: 'Search autocomplete',
+  marketplace: 'E-commerce checkout',
+  video: 'Video platform',
+  chat: 'Messaging',
+  feed: 'Social feed',
+  tickets: 'Ticket sales',
+  rides: 'Ride hailing',
+  ledger: 'Payments ledger',
+};
+const minutes = (s) => Math.round((s.phases.reduce((a, p) => a + p.dur, 0) + 240) / 60);
+const diffKey = (s) => String(s.difficulty).toLowerCase();
+
+// ── the traffic you will face: every phase as a stacked bar of its request types, the surge as a spike.
+// Widths follow phase durations, heights follow request rates, colors are the dots you see on the board.
+// A playhead (moved by the stage loop) shows where the live diagram above is in the run.
+function timeline(s) {
+  const W = 560, H = 64, top = 4;
+  const types = Object.keys(s.types);
+  const total = s.phases.reduce((a, p) => a + p.dur, 0);
+  const load = (p) => types.reduce((a, t) => a + (p.rates[t] || 0), 0);
+  const peak = Math.max(...s.phases.map((p) => load(p) * (p.surge?.mult || 1)));
+  const y = (v) => (v / peak) * (H - top);
+  let x = 0, bars = '', labels = '';
+  s.phases.forEach((p, i) => {
+    const w = (p.dur / total) * W;
+    const stack = (x0, w0, mult = 1) => {
+      let base = H, out = '';
+      types.forEach((t) => {
+        const h = y((p.rates[t] || 0) * mult);
+        if (h < 0.5) return;
+        out += `<rect x="${x0.toFixed(1)}" y="${(base - h).toFixed(1)}" width="${Math.max(0, w0 - 2).toFixed(1)}" height="${h.toFixed(1)}" fill="${s.types[t].color}"/>`;
+        base -= h;
+      });
+      return out;
+    };
+    bars += stack(x, w);
+    if (p.surge) {
+      const sx = x + (p.surge.at / p.dur) * w, sw = Math.max(8, (p.surge.dur / p.dur) * w);
+      bars += stack(sx, sw + 2, p.surge.mult);
+    }
+    labels += `<span style="flex:${p.dur}" data-ph="${i}"><b>${pad(i + 1)}</b>${p.name}</span>`;
+    x += w;
+  });
+  return `<div class="tl"><svg class="tr" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">${bars}<rect class="tl-fog" x="0" y="0" width="${W}" height="${H}"/></svg><i class="tl-ph"></i></div>
+    <div class="tr-ph">${labels}</div>`;
 }
 
-// ── step illustrations
-const STEP_ART = [
-  // ask
-  `<svg viewBox="0 0 220 106"><rect class="f" x="4" y="8" width="128" height="38" rx="10"/><path class="s" d="M24 46 l-6 12 l16 -12"/><text x="14" y="32">How many users?</text>
-   <rect class="y" x="78" y="60" width="138" height="38" rx="10" style="stroke:var(--ink);stroke-width:1.3"/><text x="88" y="84">Reads or writes?</text></svg>`,
-  // build
-  `<svg viewBox="0 0 220 106"><rect class="f" x="6" y="36" width="54" height="34" rx="6"/><text class="mono" x="14" y="57">API</text>
-   <path class="s" d="M60 53 H92"/><rect class="f" x="92" y="36" width="54" height="34" rx="6" style="stroke:var(--blue);stroke-width:1.6"/><text class="mono" x="99" y="57">CACHE</text>
-   <path class="s" d="M146 53 H170" style="stroke-dasharray:3 4"/><rect x="170" y="36" width="44" height="34" rx="6" fill="none" style="stroke:var(--muted);stroke-dasharray:4 4;stroke-width:1.3"/><text x="185" y="60">+</text>
-   <circle class="b" r="3.5"><animateMotion dur="1.4s" repeatCount="indefinite" path="M60 53 H92"/></circle></svg>`,
-  // survive
-  `<svg viewBox="0 0 220 106"><path class="s" d="M4 96 H216 M4 96 V8"/><path class="s" d="M8 86 C40 84 60 80 84 76 S120 70 132 30 S150 20 160 60 S190 70 214 64" style="stroke:var(--blue);stroke-width:1.6"/>
-   <circle class="r" cx="134" cy="27" r="5"/><text x="146" y="22" style="fill:var(--bad)">surge!</text><path class="s" d="M134 32 V96" style="stroke:var(--bad);stroke-dasharray:3 3"/></svg>`,
-  // debrief
-  `<svg viewBox="0 0 220 106"><g transform="rotate(-10 52 52)"><circle cx="52" cy="52" r="38" fill="none" style="stroke:var(--good);stroke-width:3"/><circle cx="52" cy="52" r="32" fill="none" style="stroke:var(--good);stroke-width:1"/><text x="52" y="66" text-anchor="middle" style="font:400 42px var(--font-display);fill:var(--good)">A</text></g>
-   <path class="s" d="M110 24 H210 M110 42 H196 M110 60 H206 M110 78 H170" style="stroke:var(--line);stroke-width:5;stroke-linecap:round"/></svg>`,
-];
+function panel(s, i, best) {
+  const d = diffKey(s);
+  const M = model(s);
+  const v = M.verdict;
+  const label = (id) => strip(s.nodes.find((n) => n.id === id)?.label || id);
+  const kinds = Object.values(s.types).map((t) => `<span><i style="background:${t.color}"></i>${t.name}</span>`).join('');
+  const surge = s.phases.find((p) => p.surge)?.surge;
+  return `
+    <div class="pn-top"><span class="pn-no">Exercise ${pad(i + 1)}</span><span class="diff" data-d="${d}">${s.difficulty}</span><span>~${minutes(s)} min</span>${best ? `<span class="pn-best">Best <b class="g-${best}">${best}</b></span>` : ''}</div>
+    <div class="pn-head">
+      <h2 class="pn-t">${s.title}<span>${SYSTEM[s.id] || ''}</span></h2>
+      <div class="err" aria-live="off"><small>Failed requests</small><b>0%</b></div>
+    </div>
+    <blockquote class="prompt">${strip(s.brief).replace(/^"|"$/g, '')}</blockquote>
+    <figure class="stage">
+      <figcaption><span class="st-tag">A typical first draft</span><span class="st-ph">Phase 1 · ${s.phases[0].name}</span><span class="st-surge" hidden>${surge ? strip(surge.label) : 'Surge'}</span></figcaption>
+      ${stageHtml(s)}
+      <div class="kinds">${kinds}</div>
+    </figure>
+    ${timeline(s)}
+    <p class="verdict">${v
+      ? `The usual first draft falls over in <b>phase ${v.phase + 1}, ${v.name}</b>: ${label(v.node)} at ${Math.round(v.util * 100)}%, and ${Math.round(M.peak.u * 100)}% by the end. <span>You start from an empty board: design yours, then make it hold.</span>`
+      : 'The starting system holds the traffic. The incidents are what will test it.'}</p>
+    <p class="topics"><b>Tests</b>${(s.topics || []).join(' · ')}</p>`;
+}
 
 export function renderHome(root, { mode, best, progress = { read: 0, passed: 0 }, onStart, onMode }) {
+  let stopStage = () => {};
+  const lastId = (() => { try { return localStorage.getItem('sp-last'); } catch { return null; } })();
+  let sel = Math.max(0, SCENARIOS.findIndex((s) => s.id === lastId));
   const played = Object.keys(best).length;
-  const sheets = SCENARIOS.map((s, i) => {
-    const d = String(s.difficulty).toLowerCase();
-    const stack = [...new Set(s.nodes.concat(s.shop.filter((x) => !x.trap)).map((o) => gcpOf(s, o.id, o).product).filter(Boolean))].slice(0, 6);
-    return `<button class="sheet rv" data-id="${s.id}" data-d="${d}" style="--d:${i % 3}" aria-label="${s.title}, ${s.difficulty}">
-      <span class="sheet-top"><span class="sheet-no">Sheet ${pad(i + 1)} / ${pad(SCENARIOS.length)}</span><span class="diffm" data-d="${d}">${s.difficulty}<span>${[1, 2, 3, 4].map((k) => `<i class="${k <= (DIFF[d] || 1) ? 'on' : ''}"></i>`).join('')}</span></span></span>
-      <span class="sheet-art"><span class="sheet-em">${s.icon}</span><span class="sheet-stack">${stack.map((p) => `<img src="./assets/gcp/${p}.svg" alt="">`).join('')}</span></span>
-      <span class="sheet-t">${s.title}</span>
-      <span class="sheet-p">${s.pitch}</span>
-      <span class="sheet-foot"><span class="sheet-topics">${(s.topics || []).slice(0, 3).join(' · ')}</span><span class="sheet-go">${ICON.arrow}</span></span>
-      ${best[s.id] ? `<span class="stamp ${best[s.id]}" title="Your best grade">${best[s.id]}</span>` : ''}
-    </button>`;
-  }).join('');
+
+  const rows = SCENARIOS.map((s, i) => `
+    <li><button class="ex" data-i="${i}" role="option" aria-selected="${i === sel}">
+      <span class="ex-n">${pad(i + 1)}</span>
+      <span class="ex-t"><b>${s.title}</b><small>${SYSTEM[s.id] || s.pitch}</small></span>
+      <span class="diff" data-d="${diffKey(s)}">${s.difficulty}</span>
+      <span class="ex-g ${best[s.id] ? 'g-' + best[s.id] : ''}" title="${best[s.id] ? 'Your best grade' : 'Not played yet'}">${best[s.id] || '–'}</span>
+    </button></li>`).join('');
 
   const modeNote = (m) => (m === 'interview'
-    ? '<b>Interview:</b> no hints, answers sealed until the debrief. Run it with a candidate.'
-    : '<b>Practice:</b> every answer explained on the spot, and the parts drawer nudges you toward the fix.');
-  const marquee = CONCEPTS.map((c) => `<span>${c.title}</span>`).join('');
+    ? 'No hints. Answers stay sealed until the debrief, so you can run it with a candidate.'
+    : 'Every answer is explained as you go, and the board points at the fix when something breaks.');
 
   root.innerHTML = `
-  <header class="topbar"><div class="wrap">
-    <button class="logo" data-scroll="top" aria-label="System Puzzle, back to top">${ICON.mark}<span>System <em>Puzzle</em></span></button>
+  <header class="topbar">
+    <a class="logo" href="/">${ICON.mark}<span>Under Load</span></a>
     <nav class="topnav">
-      <button data-scroll="ex">Exercises</button>
-      <button data-scroll="how">How it works</button>
-      <button data-learn-open>${ICON.book}Field manual</button>
-      <button class="pill" data-start-first>Play now</button>
+      <a href="/guide" data-learn-open>${ICON.book}Field guide<span class="tn-meta">${progress.read ? `${progress.read}/${CONCEPTS.length} read` : `${CONCEPTS.length} primers`}</span></a>
     </nav>
-  </div></header>
+  </header>
 
-  <section class="wrap hero" id="top">
-    <div>
-      <div class="hero-kicker"><span class="live"><i></i>Live traffic</span><span>System design interviews, played</span></div>
-      <h1><span class="ln"><span>Design systems</span></span><span class="ln"><span>that survive</span></span><span class="ln"><span><em>real traffic.</em></span></span></h1>
-      <p class="hero-lead">Ask the right questions, sketch the architecture while requests flow through it, fix incidents as they fire, and defend every choice in a debrief. Nine exercises, ten minutes each.</p>
-      <div class="hero-cta">
-        <button class="btn lg" data-start-first>Start with ${SCENARIOS[0].title} <span class="arr">${ICON.arrow}</span></button>
-        <div class="segment" role="radiogroup" aria-label="Mode" data-v="${mode}">
-          <button role="radio" data-mode="practice" aria-checked="${mode === 'practice'}">Practice</button>
-          <button role="radio" data-mode="interview" aria-checked="${mode === 'interview'}">Interview</button>
-        </div>
-      </div>
-      <p class="mode-note">${modeNote(mode)}</p>
-      <div class="hero-stats">
-        <div><b>${pad(SCENARIOS.length)}</b><small>Exercises</small></div>
-        <div><b>${CONCEPTS.length}</b><small>Concept primers</small></div>
-        <div><b>${SCENARIOS.reduce((a, s) => a + Object.keys(s.cards || {}).length + Object.keys(s.puzzles || {}).length, 0)}</b><small>Whiteboard calls</small></div>
-        ${played || progress.read ? `<div class="you"><b>${played}<span style="font-size:.5em">/${SCENARIOS.length}</span></b><small>You've played</small></div><div class="you"><b>${progress.passed}<span style="font-size:.5em">/${CONCEPTS.length}</span></b><small>Concepts checked</small></div>` : `<div><b>~10<span style="font-size:.5em"> min</span></b><small>Per round</small></div>`}
-      </div>
-    </div>
-    ${plate()}
-  </section>
+  <main class="picker">
+    <section class="pk-l">
+      <h1>Draw the system.<br><em>Then the traffic arrives.</em></h1>
+      <p class="lead">Nine system design interview prompts, played on a board where requests really flow. Ask the interviewer questions, build the architecture, fix what breaks under load, then read your debrief.</p>
+      <div class="pk-list-h"><h3>Exercises</h3><span>${played ? `${played} of ${SCENARIOS.length} played · ` : ''}<kbd>↑</kbd><kbd>↓</kbd> <kbd>Enter</kbd></span></div>
+      <ol class="pk-list" role="listbox" aria-label="Exercises">${rows}</ol>
+      <div class="pk-list-h"><h3>How a round goes</h3><span>~10 min</span></div>
+      <ol class="loop">
+        ${[
+          ['Ask', 'three clarifying questions'],
+          ['Design', 'your first version, on an empty board'],
+          ['Grow it', 'live traffic, incidents, a surge'],
+          ['Debrief', 'grade, red flags, strong design'],
+        ].map(([t, p], i) => `<li><b>${i + 1}</b><span><strong>${t}</strong> ${p}</span></li>`).join('')}
+      </ol>
+    </section>
 
-  <div class="marquee" aria-hidden="true"><div class="marquee-t">${marquee}${marquee}</div></div>
+    <section class="pk-r" aria-live="polite">
+      <article class="board-panel"><div class="pn-body"></div>
+        <footer class="pn-foot">
+          <div class="pn-mode">
+            <div class="segment" role="radiogroup" aria-label="Mode" data-v="${mode}">
+              <button role="radio" data-mode="practice" aria-checked="${mode === 'practice'}">Practice</button>
+              <button role="radio" data-mode="interview" aria-checked="${mode === 'interview'}">Interview</button>
+            </div>
+            <p class="mode-note">${modeNote(mode)}</p>
+          </div>
+          <a class="btn lg" data-start href="/play/${SCENARIOS[sel].id}">Start<span class="pn-start-t"></span><span class="arr">${ICON.arrow}</span></a>
+        </footer>
+      </article>
+    </section>
+  </main>
 
-  <section class="wrap sec" id="ex">
-    <div class="sec-head rv"><div class="sec-no">§ 01 — Exercises</div><h2>Nine sheets, <em>easy to expert.</em></h2><p>Each one is a real interview prompt with a traffic surge at the end: a viral link, a doorbuster, midnight on New Year's Eve.</p></div>
-    <div class="filters rv" role="toolbar" aria-label="Filter by difficulty">${['all', 'easy', 'medium', 'hard', 'expert'].map((f) => `<button data-filter="${f}" aria-pressed="${f === 'all'}">${f}</button>`).join('')}</div>
-    <div class="sheets">${sheets}</div>
-  </section>
-
-  <section class="wrap sec" id="how">
-    <div class="sec-head rv"><div class="sec-no">§ 02 — A round</div><h2>Ask. Build. <em>Survive.</em> Defend.</h2><p>The same loop a strong candidate runs on the whiteboard, with consequences you can see.</p></div>
-    <div class="loop">
-      ${[
-        ['Ask', 'Three clarifying questions. Good ones earn budget; skipping them is a red flag.'],
-        ['Build', 'Buy parts from the drawer and watch them wire in. Every one is a real Google Cloud product.'],
-        ['Survive', 'Phases of rising traffic, incidents that fire when the problem really happens, then the surge.'],
-        ['Defend', 'A stamped debrief: grade, signals and red flags, your final diagram, and what to read next.'],
-      ].map(([t, p], i) => `<article class="step rv" style="--d:${i}"><span class="step-n"><span>${pad(i + 1)}</span><span>${['~1 min', '~6 min', 'live', 'after'][i]}</span></span><h3>${t}</h3><p>${p}</p><div class="step-art">${STEP_ART[i]}</div></article>`).join('')}
-    </div>
-  </section>
-
-  <section class="wrap sec" id="manual">
-    <div class="fm-teaser rv">
-      <div class="fm-teaser-l">
-        <div><div class="eyebrow">§ 03 — Field manual</div><h2>The ideas, <em>not the answers.</em></h2></div>
-        <p>${CONCEPTS.length} short primers on the concepts underneath every exercise: what it is, when to reach for it, what goes wrong, and one line to say in the interview.</p>
-        <div class="fm-prog"><span><i style="width:${(progress.read / CONCEPTS.length) * 100}%"></i></span><small>${progress.read ? `${progress.read} of ${CONCEPTS.length} read · ${progress.passed} checked` : 'Start anywhere; each primer takes ~3 minutes'}</small></div>
-        <button class="btn lg" data-learn-open>${progress.read ? 'Continue reading' : 'Open the field manual'} <span class="arr">${ICON.arrow}</span></button>
-      </div>
-      <div class="fm-chapters">${GROUPS.map(([g, name], i) => {
-        const list = CONCEPTS.filter((c) => c.group === g);
-        return `<button class="fm-ch" data-learn="${list[0]?.id}"><small><span>Chapter ${pad(i + 1)}</span><span>${list.length} primers</span></small><b>${name}</b><span>${list.slice(0, 4).map((c) => c.title).join(' · ')}</span></button>`;
-      }).join('')}</div>
-    </div>
-  </section>
-
-  <footer class="wrap foot">
-    <div><div class="big">Draw it.<br>Ship it. Defend it.</div></div>
-    <div class="keysl"><b>Controls</b><span><kbd>Space</kbd> pause</span><span><kbd>1</kbd>–<kbd>9</kbd> buy a part</span><span><kbd>M</kbd> mute</span><span>Drag to orbit · click a part to inspect</span></div>
-    <div><b>Colophon</b>Built with Three.js. Product icons are the official set from <a href="https://cloud.google.com/icons" target="_blank" rel="noopener">cloud.google.com/icons</a>. Set in Instrument Serif, Geist and Kalam. Desktop recommended.</div>
-  </footer>`;
+`;
 
   // ── behaviour
-  const $$ = (s) => root.querySelectorAll(s);
-  $$('.sheet').forEach((b) => b.addEventListener('click', () => onStart(b.dataset.id)));
-  $$('[data-start-first]').forEach((b) => b.addEventListener('click', () => onStart(SCENARIOS[0].id)));
-  $$('[data-scroll]').forEach((b) => b.addEventListener('click', () => {
-    const t = b.dataset.scroll === 'top' ? null : root.querySelector('#' + b.dataset.scroll);
-    root.scrollTo({ top: t ? t.offsetTop - 40 : 0, behavior: 'smooth' });
-  }));
-  const seg = root.querySelector('.segment');
+  const $ = (q) => root.querySelector(q);
+  const body = $('.pn-body');
+  const select = (i, focus = false) => {
+    sel = (i + SCENARIOS.length) % SCENARIOS.length;
+    const s = SCENARIOS[sel];
+    root.querySelectorAll('.ex').forEach((b) => b.setAttribute('aria-selected', String(+b.dataset.i === sel)));
+    stopStage();
+    body.innerHTML = panel(s, sel, best[s.id]);
+    body.classList.remove('in'); void body.offsetWidth; body.classList.add('in');
+    const err = body.querySelector('.err'), ph = body.querySelector('.st-ph'), surgeTag = body.querySelector('.st-surge');
+    const fog = body.querySelector('.tl-fog'), head = body.querySelector('.tl-ph'), labels = body.querySelectorAll('[data-ph]');
+    let lastPhase = -1;
+    stopStage = runStage(body.querySelector('.stage'), s, {
+      onTick: (a, f, failRate) => {
+        const pct = Math.round(failRate * 100);
+        err.querySelector('b').textContent = `${pct}%`;
+        err.classList.toggle('bad', pct >= 5);
+        surgeTag.hidden = !a.surging;
+        head.style.left = `${(f * 100).toFixed(2)}%`;
+        fog.setAttribute('x', (f * 560).toFixed(1));
+        if (a.i !== lastPhase) {
+          lastPhase = a.i;
+          ph.textContent = `Phase ${a.i + 1} of ${s.phases.length} · ${a.phase.name}`;
+          labels.forEach((l) => l.classList.toggle('on', +l.dataset.ph === a.i));
+        }
+      },
+    });
+    $('.pn-start-t').textContent = s.title;
+    $('[data-start]').href = `/play/${s.id}`;
+    if (focus) root.querySelector(`.ex[data-i="${sel}"]`).focus({ preventScroll: false });
+    try { localStorage.setItem('sp-last', s.id); } catch {}
+  };
+  select(sel);
+
+  root.querySelectorAll('.ex').forEach((b) => {
+    b.addEventListener('click', () => select(+b.dataset.i));
+    b.addEventListener('dblclick', () => onStart(SCENARIOS[+b.dataset.i].id));
+  });
+  $('[data-start]').addEventListener('click', (e) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return; // open in a new tab
+    e.preventDefault();
+    onStart(SCENARIOS[sel].id);
+  });
+
+  const seg = $('.segment');
   seg.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => {
     const m = b.dataset.mode;
     seg.dataset.v = m;
     seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
-    root.querySelector('.mode-note').innerHTML = modeNote(m);
+    $('.mode-note').textContent = modeNote(m);
     onMode(m);
   }));
-  $$('[data-filter]').forEach((b) => b.addEventListener('click', () => {
-    $$('[data-filter]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-    $$('.sheet').forEach((s) => { s.hidden = b.dataset.filter !== 'all' && s.dataset.d !== b.dataset.filter; });
-  }));
-  // learn buttons inside home are handled by the document-level delegate in main.js ([data-learn], [data-learn-open])
 
-  const bar = root.querySelector('.topbar');
-  root.addEventListener('scroll', () => bar.classList.toggle('stuck', root.scrollTop > 8), { passive: true });
-  const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { root, threshold: 0.12 });
-  $$('.rv').forEach((el) => io.observe(el));
-
-  // title block: a believable live readout
-  let served = 0, rps = 12480;
-  const rpsEl = root.querySelector('[data-tb="rps"]'), sEl = root.querySelector('[data-tb="served"]'), pEl = root.querySelector('[data-tb="p99"]');
-  const fmt = (n) => Math.round(n).toLocaleString('en-US');
-  const tick = setInterval(() => {
-    if (root.hidden) return clearInterval(tick);
-    rps = Math.max(9000, Math.min(16000, rps + (Math.random() - 0.5) * 900));
-    served += rps / 5;
-    rpsEl.textContent = `${fmt(rps)}/s`;
-    sEl.textContent = served > 1e6 ? `${(served / 1e6).toFixed(2)}M` : fmt(served);
-    pEl.textContent = `${Math.round(38 + Math.random() * 9)} ms`;
-  }, 200);
+  const onKey = (e) => {
+    if (root.hidden || !root.isConnected || !root.contains($('.picker'))) return document.removeEventListener('keydown', onKey);
+    if (e.target.closest?.('input, textarea') || !document.getElementById('learn')?.hidden) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); select(sel + (e.key === 'ArrowDown' ? 1 : -1), true); }
+    else if (e.key === 'Enter' && !e.target.closest?.('.segment, [data-learn-open]')) { e.preventDefault(); onStart(SCENARIOS[sel].id); }
+  };
+  document.addEventListener('keydown', onKey);
+  // learn buttons are handled by the document-level delegate in main.js ([data-learn-open])
 }

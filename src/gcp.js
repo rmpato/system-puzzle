@@ -32,6 +32,7 @@ export const PRODUCTS = {
 
 // Shop sections, in display order.
 export const CATS = [
+  ['core', 'Your system'],
   ['compute', 'Compute'],
   ['data', 'Data'],
   ['cache', 'Cache'],
@@ -70,10 +71,11 @@ const MAP = {
 
 /** { product: id|null, name: display name|null, cat, src: url|null } for a scenario item or node. */
 export function gcpOf(sc, key, obj = {}) {
+  if (obj.core) key = obj.core; // a core part ("core:db") looks like the node it builds
   let [product, cat] = MAP[`${sc.id}:${key}`] || MAP[key] || [null, 'pattern'];
   if ('gcp' in obj) product = obj.gcp;
   if (obj.cat) cat = obj.cat;
-  return { product, name: product ? PRODUCTS[product] : null, cat, src: product ? `./assets/gcp/${product}.svg` : null };
+  return { product, name: product ? PRODUCTS[product] : null, cat, src: product ? `/assets/gcp/${product}.svg` : null };
 }
 
 /** Icon markup: the GCP product image, or the part's emoji when it is a pattern. */

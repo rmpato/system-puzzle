@@ -1,4 +1,4 @@
-// Static checks for a scenario file. Usage: node tools/validate.mjs [scenario-file-or-id ...]
+// Static checks for a scenario file. Usage: bun tools/validate.mjs [scenario-file-or-id ...]
 // With no args, validates every registered scenario.
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';

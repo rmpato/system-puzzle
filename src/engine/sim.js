@@ -16,14 +16,37 @@ export const TUNING = {
 };
 
 const sum = (obj, f) => Object.entries(obj || {}).reduce((a, [k, v]) => a + f(k, v), 0);
+const strip = (h) => String(h).replace(/<[^>]*>/g, '').trim();
 
-export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
+// ── Your system is not given.
+// Users, outside services (payment providers, push gateways, maps) and end-user devices are on the board
+// from the start. Every other node of the scenario is a core part the player builds: in a design step
+// before launch (free), or later during play (CORE_COST, and the report notices). Core parts are ordinary
+// shop items with id "core:<node>", so buying, wiring, impact cards and keyboard shortcuts all just work.
+const GIVEN_MODELS = new Set(['users', 'external', 'phone']);
+export const CORE_COST = 60;
+const ROLE = {
+  servers: 'Runs your application code', db: 'Stores your data', screen: 'Stores and serves the stats',
+  funnel: 'Collects logs for offline jobs', bell: 'Sends notifications', gear: 'Runs background work', stack: 'Stores files and media',
+};
+export const isGiven = (n) => n.id === 'users' || GIVEN_MODELS.has(n.model);
+export function withCore(sc) {
+  if (sc.__core) return sc;
+  const core = sc.nodes.filter((n) => !isGiven(n)).map((n) => ({
+    id: `core:${n.id}`, core: n.id, name: strip(n.label), icon: '🧱', cost: CORE_COST, max: 1,
+    desc: ROLE[n.model] || 'Part of your system', pos: n.pos, cat: 'core',
+  }));
+  return { ...sc, shop: [...core, ...sc.shop], __core: true };
+}
+
+export function createSim(scIn, { random = Math.random, tuning = {} } = {}) {
+  const sc = withCore(scIn);
   const T = { ...TUNING, startMoney: sc.money ?? TUNING.startMoney, ...(sc.tuning || {}), ...tuning };
   const SHOP = sc.shop, TYPES = sc.types, PHASES = sc.phases, HZ = sc.hazards || {}, POOLS = sc.pools, C = sc.connections;
   const CARDS = sc.cards || {}, PUZZLES = sc.puzzles || {}, QUESTIONS = sc.questions || [];
 
   const S = {
-    mode: 'setup', // setup | play | incident | break | over
+    mode: 'setup', // setup | design | play | break | over  (incidents queue up in S.queue while play continues)
     userPaused: false,
     time: 0, phase: 0, phaseTime: 0,
     money: T.startMoney, rep: 100, moneyRate: 0, lastMoney: T.startMoney,
@@ -32,7 +55,8 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     tok: {}, demand: {}, load: {}, nodeLoad: {}, hotT: 0, meterT: 0,
     accum: {}, seen: {}, signals: [], flags: [],
     pendingDup: 0, surging: false, outage: false, queued: 0, raceTimer: 4, raceTaken: {},
-    counts: { duplicate: 0, race: 0, timeout: 0, lost: 0, scaleFirst: 0, earlyTraps: 0 },
+    counts: { duplicate: 0, race: 0, timeout: 0, lost: 0, scaleFirst: 0, earlyTraps: 0, unbuilt: 0 },
+    launchDesign: null,
     firsts: {}, timeline: [], answers: {}, judge: { pts: 0, max: 0 },
     queue: [], scheduled: [], breakQueue: [], breakTotal: 0, ending: false, outageEnd: false,
   };
@@ -46,17 +70,23 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
   const item = (id) => SHOP.find((s) => s.id === id);
   const count = (id) => S.built[id] || 0;
   const has = (id) => count(id) > 0;
-  const cap = (p) => POOLS[p].base + sum(POOLS[p].per, (id, v) => count(id) * v);
+  const nodeById = Object.fromEntries(sc.nodes.map((n) => [n.id, n]));
+  /** Is this node on the board? Given nodes always are; core nodes once the player has built them. */
+  const placed = (id) => !nodeById[id] || isGiven(nodeById[id]) || has(`core:${id}`);
+  const coreItems = () => SHOP.filter((s) => s.core);
+  const cap = (p) => (placed(POOLS[p].node) ? POOLS[p].base + sum(POOLS[p].per, (id, v) => count(id) * v) : 0);
   const connections = () => (!C ? 0 : has(C.fix) ? C.fixed : C.base + sum(C.per, (id, v) => count(id) * v));
   const connBad = () => !!C && connections() > C.limit;
   const upkeep = () => SHOP.reduce((a, s) => a + (s.upkeep || 0) * count(s.id), 0);
   const price = (id) => {
     const s = item(id);
+    if (s.core && S.mode === 'design') return 0;
     return Math.round(s.cost * (S.discount[id] ? T.discount : 1) * (1 + count(id) * (s.costStep || 0)));
   };
   const onCredit = (id) => !!(T.credit && S.credit[id] && S.money >= 0 && S.money < price(id));
   const affordable = (id) => S.money >= price(id) || onCredit(id);
-  const canBuy = (id) => S.mode !== 'setup' && S.mode !== 'over' && count(id) < (item(id).max || 1) && affordable(id);
+  const canBuy = (id) => S.mode !== 'setup' && S.mode !== 'over' && count(id) < (item(id).max || 1) && affordable(id)
+    && !(item(id).scales && !placed(POOLS[item(id).scales].node)); // can't add servers to an API that doesn't exist
   const live = () => S.mode === 'play' && !S.userPaused;
   const nodePools = (node) => Object.keys(POOLS).filter((p) => POOLS[p].node === node);
   const nodeCap = (node) => nodePools(node).reduce((a, p) => a + cap(p), 0);
@@ -89,9 +119,20 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     S.lastMoney = S.money;
     return bonus;
   }
-  function start() { S.mode = 'play'; emit('phase', S.phase); }
+  /** The design step: the board is empty except for what's given, and core parts are free. */
+  function design() { if (S.mode === 'setup') { S.mode = 'design'; emit('design', {}); } }
+  function start() {
+    S.launchDesign = { core: coreItems().filter((s) => has(s.id)).map((s) => s.core), items: SHOP.filter((s) => !s.core && has(s.id)).map((s) => s.id) };
+    const missing = coreItems().filter((s) => !has(s.id)).map((s) => s.name);
+    log('design', `Launched with ${S.launchDesign.core.length} of ${coreItems().length} core parts${missing.length ? ` (no ${missing.join(', ')})` : ''}`, missing.length ? 'bad' : 'good');
+    S.mode = 'play';
+    emit('phase', S.phase);
+  }
 
-  // ── interrupts
+  // ── interviewer cards
+  // Incidents never stop the simulation: they queue in S.queue and the UI shows one at a time beside the
+  // live board (slowed down, not paused), so the question is asked about what is visibly happening.
+  // Whiteboard breaks (between phases, and the closing questions) are the only time traffic stops.
   function trigger(key, delay = 0) {
     if (!key || S.seen[key] || !CARDS[key]) return;
     S.seen[key] = true;
@@ -102,22 +143,29 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
   const CARD_GAP = 4;
   function enqueue(key) {
     if (S.mode === 'over') return;
-    const busy = S.mode === 'incident' || S.queue.length;
+    const busy = S.queue.length > 0;
     // cards that point at a fix are urgent; informational ones wait for a quieter moment
     if (!CARDS[key]?.fix && (busy || (S.lastCardAt !== undefined && S.time - S.lastCardAt < CARD_GAP))) {
       S.scheduled.push({ at: Math.max(S.time, (S.lastCardAt ?? S.time)) + CARD_GAP, key });
       return;
     }
     S.queue.push(key);
-    if (S.mode === 'play') { S.mode = 'incident'; S.lastCardAt = S.time; emit('incident', key); }
+    if (S.queue.length === 1) { S.lastCardAt = S.time; emit('incident', key); }
+  }
+  /** The opening design question, asked before launch instead of interrupting the first seconds of play. */
+  function opening() {
+    const key = sc.startCard;
+    if (!key || !CARDS[key] || S.seen[key]) return null;
+    S.seen[key] = true;
+    return { kind: 'card', id: key, data: CARDS[key], opening: true };
   }
   function current() {
-    if (S.mode === 'incident') return { kind: 'card', id: S.queue[0], data: CARDS[S.queue[0]], incident: true };
     if (S.mode === 'break') {
       const id = S.breakQueue[0];
       const step = S.breakTotal - S.breakQueue.length + 1;
       return PUZZLES[id] ? { kind: PUZZLES[id].kind, id, data: PUZZLES[id], step, total: S.breakTotal, closing: S.ending } : { kind: 'card', id, data: CARDS[id], step, total: S.breakTotal, closing: S.ending };
     }
+    if (S.queue.length) return { kind: 'card', id: S.queue[0], data: CARDS[S.queue[0]], incident: true, more: S.queue.length - 1 };
     return null;
   }
   function answerCard(id, i) {
@@ -150,12 +198,11 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     return { per, correct, total: per.length, ratio, reward };
   }
   function next() {
-    if (S.mode === 'incident') S.queue.shift();
-    else if (S.mode === 'break') S.breakQueue.shift();
-    resume();
+    if (S.mode === 'break') { S.breakQueue.shift(); resume(); return; }
+    S.queue.shift();
+    if (S.queue.length) { S.lastCardAt = S.time; emit('incident', S.queue[0]); }
   }
   function resume() {
-    if (S.queue.length) { S.mode = 'incident'; emit('incident', S.queue[0]); return; }
     if (S.breakQueue.length) { S.mode = 'break'; emit('break', S.breakQueue[0]); return; }
     if (S.ending) { finish(false); return; }
     if (S.mode === 'break') { S.mode = 'play'; emit('phase', S.phase); return; }
@@ -248,6 +295,12 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
       const st = D.steps[i], c = costs[i];
       if (!c) continue;
       const P = POOLS[st.pool];
+      if (!placed(P.node)) {
+        S.counts.unbuilt++;
+        fail(r, P.node);
+        first(`missing:${P.node}`, `Nothing handles ${TYPES[r.type].name.toLowerCase()} requests: there is no ${strip(nodeById[P.node].label)}`);
+        return;
+      }
       if (P.conn && connBad()) { fail(r, P.node); first('conn', C.firstText || 'Database refused connections'); trigger(C.card); return; }
       if (!take(st.pool, c)) {
         fail(r, P.node);
@@ -262,9 +315,9 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
       for (const v of st.via || []) {
         if (has(v.item) && random() < (v.p ?? 1)) { to = v.node || v.item; idx = Math.floor(random() * count(v.item)); break; }
       }
-      emit('hop', { type: r.type, from: r.to, to, idx });
+      if (placed(to)) emit('hop', { type: r.type, from: r.to, to, idx });
     });
-    for (const h of D.hops || []) if (!h.if || has(h.if)) emit('hop', { type: r.type, from: r.to, to: h.node, idx: 0 });
+    for (const h of D.hops || []) if ((!h.if || has(h.if)) && placed(h.node)) emit('hop', { type: r.type, from: r.to, to: h.node, idx: 0 });
 
     if (!D.value) { S.served++; emit('resolve', { r, ok: true }); return; }
     emit('resolve', { r, ok: true });
@@ -307,6 +360,13 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
   }
   function resolveEvent(r) {
     const ev = r.ev;
+    if (!placed(r.to)) { // e.g. click stats with no analytics store: the data has nowhere to go
+      S.counts.unbuilt++;
+      S.rep -= T.failRep;
+      first(`missing:${r.to}`, `${ev.name || 'Events'} have nowhere to go: there is no ${strip(nodeById[r.to].label)}`);
+      emit('resolve', { r, ok: false, where: r.to });
+      return;
+    }
     if (ev.via && r.to === ev.via) {
       emit('resolve', { r, ok: true });
       if (S.outage && HZ.outage?.node === ev.to) S.queued++;
@@ -373,7 +433,7 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     if (H.spike !== undefined && S.phaseTime > H.spike) trigger(HZ.spike?.card);
     if (H.outage) {
       const on = S.phaseTime >= H.outage[0] && S.phaseTime < H.outage[1];
-      if (on && !S.outage) { S.outage = true; first('outage', HZ.outage.startText || 'A downstream service went down'); emit('outage', { on: true, node: HZ.outage.node }); trigger(HZ.outage.card, 0.4); }
+      if (on && !S.outage && placed(HZ.outage.node)) { S.outage = true; first('outage', HZ.outage.startText || 'A downstream service went down'); emit('outage', { on: true, node: HZ.outage.node }); trigger(HZ.outage.card, 0.4); }
       if (!on && S.outage) {
         S.outage = false;
         log('event', `${HZ.outage.label || 'Service'} recovered${S.queued ? `; queue delivered ${S.queued}` : ''}`, S.queued ? 'good' : 'info');
@@ -395,8 +455,9 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     S.meterT += dt;
     if (S.meterT >= 0.5) {
       const m = S.meterT;
-      for (const p in POOLS) S.load[p] = S.load[p] * 0.5 + (S.demand[p] / m / Math.max(0.001, cap(p))) * 0.5;
+      for (const p in POOLS) S.load[p] = placed(POOLS[p].node) ? S.load[p] * 0.5 + (S.demand[p] / m / Math.max(0.001, cap(p))) * 0.5 : 0;
       for (const n of new Set(Object.values(POOLS).map((p) => p.node))) {
+        if (!placed(n)) { S.nodeLoad[n] = 0; continue; } // a part that doesn't exist isn't overloaded, it's missing
         const d = nodePools(n).reduce((a, p) => a + S.demand[p], 0);
         S.nodeLoad[n] = (S.nodeLoad[n] || 0) * 0.5 + (d / m / Math.max(0.001, nodeCap(n))) * 0.5;
         if (S.nodeLoad[n] > 1.05 && !(C && POOLS[C.pool]?.node === n && connBad())) first(`hot:${n}`, `${(sc.nodes.find((x) => x.id === n) || {}).label || n} overloaded`);
@@ -410,7 +471,7 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
       emit('meter', {});
     }
 
-    if (S.time > 2.5) trigger(sc.startCard);
+    if (S.time > 2.5) trigger(sc.startCard); // only fires if the UI didn't ask it before launch (opening())
     if (HZ.overload && S.hotT > (HZ.overload.after ?? 3)) trigger(HZ.overload.card);
 
     if (S.rep <= 0) { S.rep = 0; log('event', 'Reputation hit zero. Site down.', 'bad'); finish(true); return; }
@@ -453,6 +514,15 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
       if (S.counts.scaleFirst >= 2) add(fl, R.scaleFirst.flag);
       else if (R.scaleFirst.fixes.every(([, fix]) => has(fix))) add(sig, R.scaleFirst.signal);
     }
+    // the first design: what was on the board at launch, and what was never built at all
+    const L = S.launchDesign;
+    if (L) {
+      const core = coreItems();
+      const late = core.filter((s) => !L.core.includes(s.core) && has(s.id)), never = core.filter((s) => !has(s.id));
+      if (late.length + never.length === 0) add(sig, 'Designed a complete first version before launch');
+      for (const s of late) add(fl, `Launched without ${s.name}; added it once things broke`);
+      for (const s of never) add(fl, `Never built ${s.name}`);
+    }
     const traps = S.counts.earlyTraps; // traps bought in the phase they're legitimate cost upkeep only
     if (!traps && R.noTraps) add(sig, R.noTraps);
 
@@ -486,6 +556,6 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     S, reqs, T, sc,
     on: (fn) => listeners.push(fn),
     item, count, has, cap, connections, connBad, upkeep, price, canBuy, affordable, onCredit, live, nodeCap,
-    ask, start, buy, step, togglePause, current, answerCard, solvePuzzle, next, results,
+    ask, design, start, buy, step, togglePause, current, opening, answerCard, solvePuzzle, next, results, placed, coreItems,
   };
 }

@@ -1,18 +1,30 @@
-// Whiteboard-style model library: pastel solids with ink outlines.
+// Whiteboard-style model library: soft ceramic solids with ink outlines, like painted pieces on a whiteboard.
 // makeModel(kind, color) → { group, mesh, h, leds?, spin? }
 //   mesh: main mesh (its material color is animated for hot/outage states when built with { own: true })
 //   h:    model height, used to place labels
+// Every color goes through soften(): scenario colors are bright pastels picked one by one, and softening
+// them toward the board's white gives the whole board one family of tints.
 import * as THREE from 'three';
 
-export const INK = '#1c2433';
-const inkLine = new THREE.LineBasicMaterial({ color: INK });
+export const INK = '#1f232b';
+const inkLine = new THREE.LineBasicMaterial({ color: INK, transparent: true, opacity: 0.78 });
 const inkMat = new THREE.MeshBasicMaterial({ color: INK });
 const cache = {};
-const mat = (c) => (cache[c] ||= new THREE.MeshStandardMaterial({ color: c, roughness: 0.7 }));
+const tmp = { h: 0, s: 0, l: 0 };
+/** Harmonize a color: less saturation, lifted toward the board white. */
+export function soften(c) {
+  const col = new THREE.Color(c);
+  col.getHSL(tmp);
+  if (tmp.s < 0.05) return col; // greys and whites stay as they are
+  col.setHSL(tmp.h, Math.min(0.62, tmp.s * 0.72), 0.58 + tmp.l * 0.3);
+  return col;
+}
+const ceramic = (c) => new THREE.MeshPhysicalMaterial({ color: soften(c), roughness: 0.48, metalness: 0, clearcoat: 0.55, clearcoatRoughness: 0.32, envMapIntensity: 0.55 });
+const mat = (c) => (cache[c] ||= ceramic(c));
 
 function solid(geo, color, { x = 0, y = 0, z = 0, edges = true, own = false, rx = 0, ry = 0, rz = 0 } = {}) {
   const g = new THREE.Group();
-  const m = new THREE.Mesh(geo, own ? new THREE.MeshStandardMaterial({ color, roughness: 0.7 }) : mat(color));
+  const m = new THREE.Mesh(geo, own ? ceramic(color) : mat(color));
   m.castShadow = m.receiveShadow = true;
   g.add(m);
   if (edges) g.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), inkLine));
@@ -38,7 +50,8 @@ export function makeModel(kind, color, { own = false } = {}) {
   switch (kind) {
     case 'platform': main(solid(new THREE.CylinderGeometry(4, 4, 0.3, 48), c || '#ffffff', { y: 0.15 })); out.h = 0.3; break;
     case 'person': {
-      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.38, 4, 10), mat(c));
+      // people keep their full color: they are the request types walking around
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.38, 4, 10), (cache['raw' + c] ||= new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.5, clearcoat: 0.4, envMapIntensity: 0.5 })));
       body.position.y = 0.62; body.castShadow = true;
       const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 12), mat('#f6d2b1'));
       head.position.y = 1.15; head.castShadow = true;

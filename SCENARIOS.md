@@ -7,9 +7,9 @@ Reference implementation: `src/scenarios/marketplace.js` + `src/scenarios/market
 ## Workflow
 
 ```bash
-node tools/validate.mjs src/scenarios/<id>.js      # schema + layout checks; must show 0 errors
-node tools/balance.mjs src/scenarios/<id>.js 150   # balance across 6 bot strategies
-FLAGS=1 node tools/balance.mjs src/scenarios/<id>.js 150   # + most common red flags
+bun tools/validate.mjs src/scenarios/<id>.js      # schema + layout checks; must show 0 errors
+bun tools/balance.mjs src/scenarios/<id>.js 150   # balance across 6 bot strategies
+FLAGS=1 bun tools/balance.mjs src/scenarios/<id>.js 150   # + most common red flags
 ```
 
 Registering in `src/scenarios/index.js` makes it appear in the picker (the lead integrator does this).
@@ -146,7 +146,7 @@ export default {
 
 `db, cyl, external (dashed third-party box), bell, box, cloud, octa, ring, key, tube (queue), lock, wheel (big spinning, for k8s-like traps), cluster (8 small boxes), shards, gear (spins), shield, hourglass, phone, pin, screen, globe (spins), stack, sphere, cone, tower, funnel, film, counter`. Nodes may also use `users` and `servers`.
 
-### Balance targets (`node tools/balance.mjs <file> 150`)
+### Balance targets (`bun tools/balance.mjs <file> 150`)
 
 | bot | meaning | target |
 | --- | --- | --- |
@@ -158,3 +158,8 @@ export default {
 | idle | buys nothing | F |
 
 Money should feel tight in the middle phase (you can't buy every fix at once) but a good player should end with surplus. If expert isn't S, the scenario is too hard or the bot can't find the fix (check the `symptom` keys). If average gets S, the pressure is too low.
+
+## Core parts are built by the player
+
+Every node except `users`, `external` (outside services) and `phone` (end-user devices) is a core part the player builds in the design step. `withCore()` in `src/engine/sim.js` turns each into a shop item `core:<node id>` (free while designing, `CORE_COST` during play, category "Your system"). An unbuilt node has no capacity: requests whose steps reach it fail, and events sent to it are lost. Keep node positions and wires as before; wires appear once both ends exist.
+

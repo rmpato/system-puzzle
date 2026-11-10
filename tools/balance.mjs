@@ -1,5 +1,5 @@
 // Headless balance bot: plays the real simulation of a scenario with several strategies.
-// Usage: node tools/balance.mjs [scenario|all] [runs] [strategy]
+// Usage: bun tools/balance.mjs [scenario|all] [runs] [strategy]
 //   FLAGS=1 also prints the most common red flags per strategy.
 import { createSim } from '../src/engine/sim.js';
 import { SCENARIOS, byId } from '../src/scenarios/index.js';
@@ -13,7 +13,7 @@ const syms = (it) => [].concat(it.symptom || []).flatMap((k) => (k === 'hazard:r
 
 function answerAll(sim, accuracy, r) {
   let guard = 0;
-  while ((sim.S.mode === 'incident' || sim.S.mode === 'break') && guard++ < 60) {
+  while ((sim.S.queue.length || sim.S.mode === 'break') && guard++ < 60) {
     const c = sim.current();
     const right = r() < accuracy;
     if (c.kind === 'card') {
@@ -96,11 +96,14 @@ export function play(sc, name, seed) {
     : strat.questions === 'bad' ? qs.filter(([q]) => !q.good).map(([, i]) => i).slice(0, 2).concat([qs.find(([q]) => q.good)[1]])
     : strat.questions === 'mixed' ? shuffle(qs.map(([, i]) => i), r).slice(0, 3) : [];
   sim.ask(picks);
+  sim.design(); // the bots build the full first version (what used to be given)
+  for (const it of sim.coreItems()) sim.buy(it.id);
   sim.start();
   const dt = 1 / 30;
   let thinkT = 0, guard = 0;
   while (sim.S.mode !== 'over' && guard++ < 30 * 60 * 15) {
     if (sim.S.mode !== 'play') { answerAll(sim, strat.accuracy, r); continue; }
+    if (sim.S.queue.length) answerAll(sim, strat.accuracy, r); // incidents arrive while play continues
     sim.step(dt);
     thinkT += dt;
     if (thinkT > 0.25) { thinkT = 0; strat.think(sim, sim.S, r); }
