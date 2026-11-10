@@ -287,6 +287,12 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
         S.served++;
         const h = HZ.race;
         if (has(h.fix)) { emit('blocked', { text: h.blocked, at: h.at }); return; }
+        // the first race is a near miss: a visible warning with no damage, so an attentive player can react once
+        if (S.firsts['warn:race'] === undefined) {
+          first('warn:race', h.nearText || `Near miss: ${h.firstText || 'two requests almost took the same item'}`, 'info');
+          emit('blocked', { text: `⚠ near miss: ${String(h.text).replace(/^\S+\s/, '')}`, at: h.at });
+          return;
+        }
         S.counts.race++;
         hazardHit(h, 'race');
         return;
@@ -455,7 +461,7 @@ export function createSim(sc, { random = Math.random, tuning = {} } = {}) {
     const pen = (k, d) => (HZ[k]?.score ?? d);
     const incidentScore = Math.max(0, 100 - pen('duplicate', 10) * c.duplicate - pen('race', 15) * c.race - pen('outage', 2) * c.lost - pen('timeout', 5) * c.timeout);
     const ops = S.outageEnd ? 0 : uptimeScore * 0.5 + S.rep * 0.3 + incidentScore * 0.2;
-    const score = S.outageEnd ? 0 : Math.round(judgement * 0.5 + ops * 0.5 - traps * 4 - Math.max(0, fl.length - sig.length) * 1.5);
+    const score = S.outageEnd ? 0 : Math.round(judgement * 0.5 + ops * 0.5 - traps * 6 - Math.max(0, fl.length - sig.length) * 1.5);
     const grade = S.outageEnd ? 'F' : score >= 88 ? 'S' : score >= 78 ? 'A' : score >= 66 ? 'B' : score >= 54 ? 'C' : 'D';
     const verdict = { S: 'Strong hire', A: 'Hire', B: 'Lean hire', C: 'Lean no hire', D: 'No hire', F: 'Site down' }[grade];
 

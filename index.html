@@ -353,6 +353,15 @@
   .toast .gx { width: 26px; height: 26px; } .toast .gx.emo { font-size: 19px; }
   .toast small { display: block; font: 500 10.5px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
   .toast.out { opacity: 0; transform: translateX(-12px); }
+  .toast { display: block; width: 330px; }
+  .imp-h { display: flex; align-items: center; gap: 10px; }
+  .imp { list-style: none; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--line); display: grid; gap: 4px; font-size: 12.5px; }
+  .imp li { display: flex; gap: 7px; align-items: baseline; }
+  .imp li::before { font: 600 11px var(--font-mono); flex: none; width: 12px; }
+  .imp li.up::before { content: '+'; color: var(--good); }
+  .imp li.down::before { content: '−'; color: var(--bad); }
+  .imp-why { margin: 8px 0 0; padding: 8px 10px; background: var(--note); border-radius: 2px; font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
+  .toast.trap { border-color: var(--warn); }
 
   /* inspector */
   #insp { position: fixed; z-index: 8; width: 280px; padding: 14px 16px 15px; pointer-events: auto; animation: pop .25s var(--ease-out); }

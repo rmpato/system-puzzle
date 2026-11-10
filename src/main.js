@@ -5,7 +5,7 @@ import { createSim } from './engine/sim.js';
 import { makeModel, INK } from './engine/models.js';
 import { SCENARIOS, byId } from './scenarios/index.js';
 import { gcpOf, iconHtml, CATS, PRODUCTS } from './gcp.js';
-import { CONCEPTS, GROUPS, conceptById, conceptForItem, conceptForCard } from './learn.js';
+import { CONCEPTS, GROUPS, TRAP_WHY, conceptById, conceptForItem, conceptForCard } from './learn.js';
 import { renderHome, ICON } from './home.js';
 
 const $ = (id) => document.getElementById(id);
@@ -453,7 +453,11 @@ function onBuy(id, n) {
   }
   ripple(pos, '#2f6fed');
   sfx('build');
-  toast(`${ico(id, it, 'gx')}<span><b>${it.name}</b> ${it.trap ? 'adopted' : 'deployed'}${gcpOf(sc, id, it).name ? `<small>${gcpOf(sc, id, it).name}</small>` : ''}</span>`);
+  const fx = impactOf(id);
+  toast(`<div class="imp-h">${ico(id, it, 'gx')}<span><b>${it.name}</b> ${it.trap ? 'adopted' : 'deployed'}${gcpOf(sc, id, it).name ? `<small>${gcpOf(sc, id, it).name}</small>` : ''}</span></div>`
+    + (fx.lines.length ? `<ul class="imp">${fx.lines.map(([tone, t]) => `<li class="${tone}">${t}</li>`).join('')}</ul>` : '')
+    + (it.trap && TRAP_WHY[id] ? `<p class="imp-why">${TRAP_WHY[id]}</p>` : ''), it.trap ? 'trap' : '', it.trap ? 7000 : 4200);
+  fx.floats.forEach(([node, text], k) => setTimeout(() => floatText(topOf(node), text, false), 250 + k * 350));
   syncWires();
   syncGhosts();
   shopSig = '';
@@ -464,14 +468,45 @@ function onBuy(id, n) {
 const toasts = document.createElement('div');
 toasts.id = 'toasts';
 document.body.appendChild(toasts);
-function toast(html) {
+function toast(html, cls = '', ms = 2200) {
   const t = document.createElement('div');
-  t.className = 'toast note';
+  t.className = `toast note ${cls}`;
   t.innerHTML = html;
   toasts.appendChild(t);
   while (toasts.children.length > 3) toasts.firstChild.remove();
-  setTimeout(() => t.classList.add('out'), 2200);
-  setTimeout(() => t.remove(), 2700);
+  setTimeout(() => t.classList.add('out'), ms);
+  setTimeout(() => t.remove(), ms + 500);
+}
+// What a purchase actually changed, derived from the scenario data, so every part visibly does something.
+const nodeName = (nid) => plain(sc.nodes.find((n) => n.id === nid)?.label || nid);
+function impactOf(id) {
+  const it = sim.item(id), lines = [], floats = [];
+  for (const [pid, pool] of Object.entries(sc.pools)) {
+    const d = pool.per?.[id];
+    if (!d) continue;
+    const before = sim.cap(pid) - d, pct = Math.round((d / Math.max(1, before)) * 100);
+    lines.push(['up', `+${pct}% capacity on ${nodeName(pool.node)}`]);
+    floats.push([pool.node, `+${pct}% capacity`]);
+  }
+  if (it.relieves && sc.pools[it.relieves]) lines.push(['up', `Takes load off ${nodeName(sc.pools[it.relieves].node)}`]);
+  const mods = {};
+  for (const t of Object.values(sc.types)) for (const st of t.steps || []) {
+    const m = st.mods?.[id];
+    if (m !== undefined && sc.pools[st.pool]) (mods[`${sc.pools[st.pool].node}|${m}`] ||= { node: sc.pools[st.pool].node, m, types: [] }).types.push(t.name);
+  }
+  for (const { node, m, types } of Object.values(mods)) {
+    const pct = Math.round((1 - m) * 100);
+    lines.push(['up', `${nodeName(node)} work ${pct > 0 ? '−' : '+'}${Math.abs(pct)}% for ${types.slice(0, 2).join(', ').toLowerCase()}`]);
+    if (pct > 0) floats.push([node, `−${pct}% work`]);
+  }
+  for (const h of Object.values(sc.hazards || {})) if (h.fix === id && h.text) lines.push(['up', `Prevents: ${plain(h.text).replace(/^[^\w]+\s*/u, '')}`]);
+  const C = sc.connections;
+  if (C?.fix === id) lines.push(['up', `${nodeName(sc.pools[C.pool].node)} connections pooled to ${C.fixed}`]);
+  else if (C?.per?.[id]) lines.push(['down', `+${C.per[id]} connections to ${nodeName(sc.pools[C.pool].node)} (limit ${C.limit})`]);
+  if (it.upkeep) lines.push(['down', `Costs $${it.upkeep}/s for the rest of the game`]);
+  if (it.trap && !lines.some(([t]) => t === 'up')) lines.unshift(['down', 'No effect on traffic at this scale']);
+  else if (!lines.some(([t]) => t === 'up') && it.desc) lines.unshift(['up', it.desc]);
+  return { lines, floats };
 }
 
 // ═════════════════════════════════════════════ frame loop

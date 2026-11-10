@@ -13,7 +13,7 @@ export default {
   startCard: 'start',
 
   pools: {
-    api: { node: 'api', base: 8, per: { instance: 8, owncdn: 6, codec: 3, micro: 4 } },
+    api: { node: 'api', base: 8, per: { instance: 8, owncdn: 3, codec: 2, micro: 3 } },
     db: { node: 'db', base: 12 },
     read: { node: 'db', base: 0, per: { replica: 12 }, fallback: 'db' },
   },
@@ -36,9 +36,9 @@ export default {
     { id: 'cache', icon: '🧺', name: 'Feed cache', cost: 150, desc: 'Cached home feed', model: 'box', color: '#ffcfcf', pos: [5.5, 5], label: 'Feed cache', symptom: 'hot:db', proactive: 2, relieves: 'read' },
     { id: 'search', icon: '🔍', name: 'Search index', cost: 200, desc: 'Cheap title search', model: 'octa', color: '#d5c5ff', pos: [3.5, -7.5], label: 'Search index', symptom: 'type:search', relieves: 'api' },
     { id: 'replica', icon: '📚', name: 'Read replica', cost: 220, max: 2, desc: 'More DB reads (not writes)', model: 'cyl', color: '#ffe6c2', slots: [[15.6, -3.2], [15.6, 3.2]], label: 'Replica', scales: 'read' },
-    { id: 'owncdn', icon: '🛰️', name: 'Own CDN', cost: 400, upkeep: 5, trap: true, trapUntil: 99, desc: '+capacity · costs $5/s', model: 'globe', color: '#9fdcff', pos: [-12, -6], label: 'Own edge PoPs' },
-    { id: 'codec', icon: '🧪', name: 'Custom codec', cost: 300, upkeep: 4, trap: true, trapUntil: 99, desc: '+capacity · costs $4/s', model: 'film', color: '#e2c6ff', pos: [16.5, 7], label: 'Custom codec' },
-    { id: 'micro', icon: '🧩', name: 'Microservices', cost: 300, upkeep: 4, trap: true, desc: '+capacity · costs $4/s', model: 'cluster', pos: [0, 5.6], ghost: 4.6, label: '8 services' },
+    { id: 'owncdn', icon: '🛰️', name: 'Own CDN', cost: 260, upkeep: 6, trap: true, trapUntil: 99, desc: '+capacity · costs $6/s', model: 'globe', color: '#9fdcff', pos: [-12, -6], label: 'Own edge PoPs' },
+    { id: 'codec', icon: '🧪', name: 'Custom codec', cost: 220, upkeep: 5, trap: true, trapUntil: 99, desc: '+capacity · costs $5/s', model: 'film', color: '#e2c6ff', pos: [16.5, 7], label: 'Custom codec' },
+    { id: 'micro', icon: '🧩', name: 'Microservices', cost: 200, upkeep: 5, trap: true, desc: '+capacity · costs $5/s', model: 'cluster', pos: [0, 5.6], ghost: 4.6, label: '8 services' },
   ],
 
   wires: [

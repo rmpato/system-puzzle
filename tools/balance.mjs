@@ -9,7 +9,7 @@ const RUNS = +runsArg || 150;
 
 function rng(seed) { return () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296); }
 const shuffle = (a, r) => a.map((x) => [r(), x]).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
-const syms = (it) => [].concat(it.symptom || []);
+const syms = (it) => [].concat(it.symptom || []).flatMap((k) => (k === 'hazard:race' ? [k, 'warn:race'] : [k])); // the near miss counts as a visible symptom
 
 function answerAll(sim, accuracy, r) {
   let guard = 0;

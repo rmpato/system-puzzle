@@ -323,6 +323,25 @@ export const CONCEPTS = [
   },
 ];
 
+// Why each trap is over-engineering at the game's scale (shown when a player buys one).
+export const TRAP_WHY = {
+  k8s: 'Kubernetes schedules containers; the capacity comes from the machines under it. One more API server gives the same boost for a third of the price, with no cluster to run.',
+  micro: 'Splitting into services adds network hops, deploys and on-call for a small team. A well-structured monolith ships faster.',
+  mesh: 'A service mesh manages traffic between many services. You have one API.',
+  shard: 'Sharding splits writes across databases. Until one primary can\'t keep up, you pay for it daily: cross-shard queries, rebalancing.',
+  region: 'Active-active regions mean replicating data and resolving conflicts. Worth it for strict uptime or global latency, not at this stage.',
+  multi: 'Active-active regions mean replicating data and resolving conflicts. Worth it for strict uptime or global latency, not at this stage.',
+  owncdn: 'Running your own edge network costs millions; a managed CDN already has points of presence worldwide.',
+  codec: 'Standard codecs (H.264, VP9, AV1) are free and play everywhere. A custom one needs custom players.',
+  ownpush: 'Phones only wake background apps through APNs and FCM; a homemade push channel can\'t reach them.',
+  personal: 'Per-user ranking needs history and a model. Global top-k suggestions are the MVP that works.',
+  ranker: 'An ML ranker needs engagement data you don\'t have yet. Start reverse-chronological and measure.',
+  graph: 'A follows table with an index on (follower, followee) answers who-follows-whom. A graph DB is another system to run.',
+  chain: 'A blockchain adds latency, cost and irreversibility. A database with constraints and an audit log gives you integrity.',
+  ml: 'ML dispatch needs months of trip data. Nearest available driver is the right first version.',
+  nosql: 'Money needs multi-row transactions and constraints. Postgres is the boring, correct choice, and it scales further than this.',
+};
+
 export const conceptById = (id) => CONCEPTS.find((c) => c.id === id);
 export const conceptForItem = (itemId) => CONCEPTS.find((c) => (c.items || []).includes(itemId));
 
