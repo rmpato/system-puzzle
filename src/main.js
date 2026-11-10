@@ -8,6 +8,7 @@ import { SCENARIOS, byId } from './scenarios/index.js';
 import { gcpOf, iconHtml, CATS, PRODUCTS } from './gcp.js';
 import { CONCEPTS, GROUPS, TRAP_WHY, CHECKS, conceptById, conceptForItem, conceptForCard } from './learn.js';
 import { renderHome, ICON } from './home.js';
+import { BASE, url } from './base.js';
 
 const $ = (id) => document.getElementById(id);
 const FAIL_COLOR = '#e2391f';
@@ -1373,8 +1374,9 @@ function showSort(cur) {
 //   /guide            field guide contents
 //   /guide/<concept>  one primer (over a paused game when opened from the board)
 // Back/forward move between them; a game in memory survives trips into the guide and back.
-const PATHS = { home: '/', play: (id) => `/play/${id}`, guide: (id) => (id ? `/guide/${id}` : '/guide') };
-function parseRoute(path = location.pathname) {
+const PATHS = { home: url(), play: (id) => url(`play/${id}`), guide: (id) => url(id ? `guide/${id}` : 'guide') };
+function parseRoute(full = location.pathname) {
+  const path = full.startsWith(BASE) ? '/' + full.slice(BASE.length) : full; // routes are matched relative to the base
   let m;
   if ((m = path.match(/^\/play\/([\w-]+)\/?$/))) return { name: 'play', id: m[1] };
   if ((m = path.match(/^\/guide(?:\/([\w-]+))?\/?$/))) return { name: 'guide', id: m[1] || null };
@@ -1660,7 +1662,7 @@ const learnEl = document.createElement('div');
 learnEl.id = 'learn'; learnEl.hidden = true;
 document.body.appendChild(learnEl);
 let learnPaused = false, learnQuery = '';
-const learnIcon = (ic, cls = 'gx') => (PRODUCTS[ic] ? `<img class="${cls}" src="/assets/gcp/${ic}.svg" alt="">` : `<span class="${cls} emo">${ic}</span>`);
+const learnIcon = (ic, cls = 'gx') => (PRODUCTS[ic] ? `<img class="${cls}" src="${url(`assets/gcp/${ic}.svg`)}" alt="">` : `<span class="${cls} emo">${ic}</span>`);
 const learnLink = (id, prefix = '📚') => { const c = conceptById(id); return c ? `<button class="learn-link" data-learn="${c.id}">${prefix} ${c.title}</button>` : ''; };
 const scenariosFor = (c) => SCENARIOS.filter((x) => x.shop.some((it) => (c.items || []).includes(it.id)));
 const chapterOf = (c) => { const i = GROUPS.findIndex(([g]) => g === c.group); return { n: String(i + 1).padStart(2, '0'), name: GROUPS[i]?.[1] || '' }; };
@@ -1868,5 +1870,5 @@ addEventListener('popstate', () => {
   const r = parseRoute();
   if (r.name === 'play' && byId(r.id)) choose(byId(r.id));
   else if (r.name === 'guide') { homeScreen(); openLearn(r.id, false); }
-  else { if (location.pathname !== '/') go(PATHS.home, true); homeScreen(); }
+  else { if (location.pathname !== PATHS.home) go(PATHS.home, true); homeScreen(); }
 }

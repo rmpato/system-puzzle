@@ -7,6 +7,7 @@
     "dev": "bun --hot server.ts",
     "start": "NODE_ENV=production bun server.ts",
     "build": "bun tools/build.ts",
+    "build:pages": "BASE_PATH=/system-puzzle/ bun tools/build.ts",
     "validate": "bun tools/validate.mjs",
     "balance": "bun tools/balance.mjs"
   },

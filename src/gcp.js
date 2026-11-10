@@ -3,6 +3,8 @@
 // is a design pattern rather than a product (idempotency keys, locks, sequence numbers…), which keeps its emoji.
 // A scenario can override per item/node with `gcp: 'memorystore'` (or `gcp: null`) and `cat: 'data'`.
 
+import { url } from './base.js';
+
 export const PRODUCTS = {
   'compute-engine': 'Compute Engine',
   'cloud-run': 'Cloud Run',
@@ -75,7 +77,7 @@ export function gcpOf(sc, key, obj = {}) {
   let [product, cat] = MAP[`${sc.id}:${key}`] || MAP[key] || [null, 'pattern'];
   if ('gcp' in obj) product = obj.gcp;
   if (obj.cat) cat = obj.cat;
-  return { product, name: product ? PRODUCTS[product] : null, cat, src: product ? `/assets/gcp/${product}.svg` : null };
+  return { product, name: product ? PRODUCTS[product] : null, cat, src: product ? url(`assets/gcp/${product}.svg`) : null };
 }
 
 /** Icon markup: the GCP product image, or the part's emoji when it is a pattern. */

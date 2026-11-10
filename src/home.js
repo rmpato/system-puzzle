@@ -6,6 +6,7 @@
 import { SCENARIOS } from './scenarios/index.js';
 import { model, stageHtml, runStage } from './stage.js';
 import { CONCEPTS } from './learn.js';
+import { url } from './base.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 const strip = (h) => String(h).replace(/<[^>]*>/g, '').trim();
@@ -119,9 +120,9 @@ export function renderHome(root, { mode, best, progress = { read: 0, passed: 0 }
 
   root.innerHTML = `
   <header class="topbar">
-    <a class="logo" href="/">${ICON.mark}<span>Under Load</span></a>
+    <a class="logo" href="${url()}">${ICON.mark}<span>Under Load</span></a>
     <nav class="topnav">
-      <a href="/guide" data-learn-open>${ICON.book}Field guide<span class="tn-meta">${progress.read ? `${progress.read}/${CONCEPTS.length} read` : `${CONCEPTS.length} primers`}</span></a>
+      <a href="${url('guide')}" data-learn-open>${ICON.book}Field guide<span class="tn-meta">${progress.read ? `${progress.read}/${CONCEPTS.length} read` : `${CONCEPTS.length} primers`}</span></a>
     </nav>
   </header>
 
@@ -152,7 +153,7 @@ export function renderHome(root, { mode, best, progress = { read: 0, passed: 0 }
             </div>
             <p class="mode-note">${modeNote(mode)}</p>
           </div>
-          <a class="btn lg" data-start href="/play/${SCENARIOS[sel].id}">Start<span class="pn-start-t"></span><span class="arr">${ICON.arrow}</span></a>
+          <a class="btn lg" data-start href="${url(`play/${SCENARIOS[sel].id}`)}">Start<span class="pn-start-t"></span><span class="arr">${ICON.arrow}</span></a>
         </footer>
       </article>
     </section>
@@ -189,7 +190,7 @@ export function renderHome(root, { mode, best, progress = { read: 0, passed: 0 }
       },
     });
     $('.pn-start-t').textContent = s.title;
-    $('[data-start]').href = `/play/${s.id}`;
+    $('[data-start]').href = url(`play/${s.id}`);
     if (focus) root.querySelector(`.ex[data-i="${sel}"]`).focus({ preventScroll: false });
     try { localStorage.setItem('sp-last', s.id); } catch {}
   };
