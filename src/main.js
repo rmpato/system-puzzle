@@ -6,9 +6,10 @@ import { makeModel, INK } from './engine/models.js';
 import { SCENARIOS, byId } from './scenarios/index.js';
 import { gcpOf, iconHtml, CATS, PRODUCTS } from './gcp.js';
 import { CONCEPTS, GROUPS, conceptById, conceptForItem, conceptForCard } from './learn.js';
+import { renderHome, ICON } from './home.js';
 
 const $ = (id) => document.getElementById(id);
-const FAIL_COLOR = '#e5484d';
+const FAIL_COLOR = '#e2391f';
 const GRADE_ORDER = ['S', 'A', 'B', 'C', 'D', 'F'];
 
 // ═════════════════════════════════════════════ persistence (per-viewer convenience only)
@@ -66,7 +67,7 @@ const labelRenderer = new CSS2DRenderer();
 labelRenderer.domElement.className = 'labels';
 document.body.appendChild(labelRenderer.domElement);
 
-const PAPER = '#eef2f6';
+const PAPER = '#efebe3';
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(PAPER);
 scene.fog = new THREE.Fog(PAPER, 50, 95);
@@ -81,7 +82,7 @@ controls.minDistance = 12;
 controls.maxDistance = 60;
 controls.target.copy(HOME_TARGET);
 
-scene.add(new THREE.HemisphereLight('#ffffff', '#c7cfdb', 2.2));
+scene.add(new THREE.HemisphereLight('#fffdf8', '#d6ccb9', 2.2));
 const sun = new THREE.DirectionalLight('#ffffff', 1.6);
 sun.position.set(-10, 30, 16);
 sun.castShadow = true;
@@ -94,9 +95,9 @@ scene.add(sun);
   const c = document.createElement('canvas');
   c.width = c.height = 64;
   const x = c.getContext('2d');
-  x.fillStyle = '#e6ebf2';
+  x.fillStyle = '#ebe6db';
   x.fillRect(0, 0, 64, 64);
-  x.fillStyle = '#b7c2d2';
+  x.fillStyle = '#c3b9a5';
   x.beginPath();
   x.arc(32, 32, 2.2, 0, Math.PI * 2);
   x.fill();
@@ -269,9 +270,9 @@ function syncWires() {
 }
 
 // ── ghost slots
-const ghostLine = new THREE.LineDashedMaterial({ color: '#8a97ab', dashSize: 0.3, gapSize: 0.22 });
-const ghostHot = new THREE.LineDashedMaterial({ color: '#2f6fed', dashSize: 0.3, gapSize: 0.22 });
-const ghostQuiet = new THREE.LineDashedMaterial({ color: '#c3ccd9', dashSize: 0.3, gapSize: 0.22 });
+const ghostLine = new THREE.LineDashedMaterial({ color: '#9b9282', dashSize: 0.3, gapSize: 0.22 });
+const ghostHot = new THREE.LineDashedMaterial({ color: '#2448f5', dashSize: 0.3, gapSize: 0.22 });
+const ghostQuiet = new THREE.LineDashedMaterial({ color: '#d2c9b8', dashSize: 0.3, gapSize: 0.22 });
 let hotGhost = null;
 const ghosts = {};
 const playing = () => sim && S.mode !== 'setup' && S.mode !== 'over';
@@ -602,10 +603,12 @@ function renderHud() {
     <div class="note stat ${S.rep < 35 ? 'low' : ''}" id="rep"><small>Reputation</small><b>${Math.round(S.rep)}</b><div class="bar"><i style="width:${Math.max(0, S.rep)}%"></i></div></div>
     <div class="spacer"></div>
     <div class="note legend top">${legendHtml}</div>
-    <button class="note iconbtn" data-learn-open aria-label="Learn the basics" title="Learn the basics (pauses)">📚</button>
-    <button class="note iconbtn" id="speedBtn" aria-label="Speed" title="Speed">${speed === 1 ? '1×' : '2×'}</button>
-    <button class="note iconbtn" id="pauseBtn" aria-label="${S.userPaused ? 'Resume' : 'Pause'}">${S.userPaused ? '▶' : '⏸'}</button>
-    <button class="note iconbtn" id="muteBtn" aria-label="${muted ? 'Unmute' : 'Mute'}">${muted ? '🔇' : '🔊'}</button>
+    <div class="note hud-tools">
+      <button class="iconbtn" data-learn-open aria-label="Field manual (pauses)" title="Field manual (pauses)">${ICON.book}</button>
+      <button class="iconbtn" id="speedBtn" aria-label="Speed" title="Speed">${speed === 1 ? '1×' : '2×'}</button>
+      <button class="iconbtn" id="pauseBtn" aria-label="${S.userPaused ? 'Resume' : 'Pause'}" title="Pause (Space)">${S.userPaused ? ICON.play : ICON.pause}</button>
+      <button class="iconbtn" id="muteBtn" aria-label="${muted ? 'Unmute' : 'Mute'}" title="Sound (M)">${muted ? ICON.mute : ICON.sound}</button>
+    </div>
   `;
 }
 $('hud').addEventListener('click', (e) => {
@@ -623,6 +626,7 @@ function togglePause() {
 }
 addEventListener('keydown', (e) => {
   if (!learnEl.hidden) { if (e.key === 'Escape') closeLearn(); return; }
+  if (!homeEl.hidden) return;
   if (e.code === 'Space' && $('modal').hidden) { e.preventDefault(); togglePause(); }
   if (e.key === 'm' || e.key === 'M') toggleMute();
   if (playing() && $('modal').hidden && /^[1-9]$/.test(e.key)) { const s = shopOrder[+e.key - 1]; if (s) buy(s.id); }
@@ -1017,39 +1021,24 @@ function showSort(cur) {
 
 // ═════════════════════════════════════════════ flow: picker → brief → questions → play
 const toPicker = () => { try { history.replaceState(null, '', location.pathname); } catch {} location.reload(); };
-function pickerScreen() {
-  const best = store.get('sp-best', {});
-  openModal(`
-    <div class="picker-head"><div>
-    <div class="eyebrow">System design interview practice</div>
-    <h1>System Puzzle</h1>
-    <p class="sub hand" style="color:var(--ink)">Pick an exercise. Ask, build, fix, defend.</p>
-    <button class="learn-cta" data-learn-open>📚 New to system design? <b>Learn the basics</b></button>
-    </div>
-    <div class="modes" role="radiogroup" aria-label="Mode">
-      <button class="mode ${mode === 'practice' ? 'on' : ''}" data-mode="practice" role="radio" aria-checked="${mode === 'practice'}"><b>🎓 Practice</b><span>Answers explained as you go</span></button>
-      <button class="mode ${mode === 'interview' ? 'on' : ''}" data-mode="interview" role="radio" aria-checked="${mode === 'interview'}"><b>🧑‍⚖️ Interview</b><span>No hints · answers in the debrief</span></button>
-    </div></div>
-    <div class="picker">${SCENARIOS.map((s) => `
-      <button class="scn" data-id="${s.id}">
-        <span class="scn-ic">${s.icon}</span>
-        <span class="scn-body"><b>${s.title}</b><span>${s.pitch}</span>
-          <span class="tags">${(s.topics || []).slice(0, 2).map((t) => `<i>${t}</i>`).join('')}</span>
-          <span class="stack-ic" title="Google Cloud products in this exercise">${[...new Set(s.nodes.concat(s.shop.filter((x) => !x.trap)).map((o) => gcpOf(s, o.id, o).product).filter(Boolean))].slice(0, 7).map((p) => `<img src="./assets/gcp/${p}.svg" alt="" title="${PRODUCTS[p]}">`).join('')}</span></span>
-        <span class="scn-meta"><em class="diff ${String(s.difficulty).toLowerCase()}">${s.difficulty}</em>${best[s.id] ? `<strong class="grade-sm ${best[s.id]}" title="Best grade">${best[s.id]}</strong>` : ''}</span>
-      </button>`).join('')}</div>
-    <div class="keys"><kbd>Space</kbd> pause · <kbd>M</kbd> mute · <kbd>1</kbd>–<kbd>9</kbd> buy · click a part to inspect · drag to look around</div>
-  `, 'wide picker-card');
-  modal.querySelector('.learn-cta').addEventListener('click', () => openLearn());
-  modal.querySelectorAll('.mode').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode; store.set('sp-mode', mode); sfx('tick'); pickerScreen(); }));
-  modal.querySelectorAll('.scn').forEach((b) => b.addEventListener('click', () => {
-    unlockAudio();
-    sfx('good');
-    try { history.replaceState(null, '', '#' + b.dataset.id); } catch {}
-    choose(byId(b.dataset.id));
-  }));
+const homeEl = $('home');
+function homeScreen() {
+  homeEl.hidden = false;
+  renderHome(homeEl, {
+    mode,
+    best: store.get('sp-best', {}),
+    onMode: (m) => { mode = m; store.set('sp-mode', mode); sfx('tick'); },
+    onStart: (id) => {
+      unlockAudio();
+      sfx('good');
+      try { history.replaceState(null, '', '#' + id); } catch {}
+      choose(byId(id));
+    },
+  });
 }
 function choose(scenario) {
+  homeEl.hidden = true;
+  homeEl.innerHTML = '';
   buildWorld(scenario);
   hookSim();
   if (new URLSearchParams(location.search).has('debug')) window.__sim = sim; // QA only: ?debug
@@ -1231,7 +1220,7 @@ function showResults() {
       <div><small>Revenue</small><b>$${r.revenue}</b></div>
       <div><small>Reputation</small><b>${Math.round(r.rep)}</b></div>
     </div>
-    <h3>Your final architecture</h3>
+    <h3>Fig. 1 — Your final architecture</h3>
     <div class="arch-wrap">${archSvg()}</div>
     ${snapshots.length ? `<details class="evo-d"><summary>How it evolved, phase by phase (${snapshots.length})</summary><div class="evo">${snapshots.map((s) => `<figure><img src="${s.url}" alt="Architecture after ${s.name}" /><figcaption>${s.name}</figcaption></figure>`).join('')}</div></details>` : ''}
     <div class="cols">
@@ -1246,6 +1235,7 @@ function showResults() {
     <div class="ask"><h3>💬 Ask next</h3><ol>${r.followups.map((s) => `<li>${s}</li>`).join('')}</ol></div>
     <details class="review" ${interview() ? 'open' : ''}><summary>Answer review (${review.filter((x) => x.good).length}/${review.length} strong)</summary><ul>${review.map((x) => `<li class="${x.good ? 'good' : 'bad'}"><b>${x.good ? '✓' : '✕'} ${x.title}</b><span>${x.chosen}</span>${!x.good && x.best ? `<span class="best">Better: ${x.best} · <em>${x.why}</em></span>` : ''}</li>`).join('')}</ul></details>
     <details class="timeline"><summary>Timeline (${tl.length})</summary><ul>${tl.map((e) => `<li class="${e.tone}"><span>${mmss(e.t)}</span><em>${sc.phases[e.phase].name}</em>${e.kind === 'buy' ? '🛒 ' : ['answer', 'puzzle', 'ask'].includes(e.kind) ? '💬 ' : '⚡ '}${e.text}</li>`).join('')}</ul></details>
+    <div class="titleblock"><div><small>Project</small><b>${sc.title}</b></div><div><small>Sheet</small><b>${String(SCENARIOS.indexOf(sc) + 1).padStart(2, '0')} / ${String(SCENARIOS.length).padStart(2, '0')}</b></div><div><small>Mode</small><b>${interview() ? 'Interview' : 'Practice'}</b></div><div><small>Date</small><b>${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</b></div><div><small>Grade</small><b>${r.grade}${isBest ? ' · best' : ''}</b></div></div>
     <div class="row"><span class="grow"><button class="link" id="others">← Other exercises</button></span><button class="btn alt" id="dl">⬇ Diagram</button><button class="btn alt" id="copy">Copy summary</button><button class="btn" id="again">Play again</button></div>
   `, 'wide results');
   $('again').addEventListener('click', () => location.reload());
@@ -1256,9 +1246,9 @@ function showResults() {
     for (const im of svg.querySelectorAll('image')) {
       try { const txt = await (await fetch(im.getAttribute('href'))).text(); im.setAttribute('href', 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(txt)))); } catch {}
     }
-    const css = `text{text-anchor:middle;font-family:'IBM Plex Sans',Arial,sans-serif}.wires line{stroke:#1c2433;stroke-width:1.6}marker path{fill:#1c2433}.tile rect{fill:#fff;stroke:#1c2433;stroke-width:1.6}.tile.ext rect{fill:#f4f6f9;stroke:#8a97ab;stroke-dasharray:5 4}.tile.trap rect{stroke:#e8930c;stroke-width:2}.tile.users rect{fill:#fff8d6}.nm{font-size:13.5px;font-weight:600;fill:#1c2433}.pd{font-size:10.5px;fill:#667085}.emo{font-size:22px}.frame rect{fill:rgba(47,111,237,.05);stroke:#2f6fed;stroke-width:1.5;stroke-dasharray:7 5}.frame.trap rect{stroke:#e8930c}.fl{text-anchor:start;font-size:12px;font-weight:700;fill:#1c2433}`;
+    const css = `text{text-anchor:middle;font-family:'Geist',Arial,sans-serif}.wires line{stroke:#121417;stroke-width:1.6}marker path{fill:#121417}.tile rect{fill:#fbfaf6;stroke:#121417;stroke-width:1.6}.tile.ext rect{fill:#e8e3d7;stroke:#6d675c;stroke-dasharray:5 4}.tile.trap rect{stroke:#cf7a06;stroke-width:2}.tile.users rect{fill:#fff3bf}.nm{font-size:13.5px;font-weight:600;fill:#121417}.pd{font-size:10.5px;fill:#6d675c}.emo{font-size:22px}.frame rect{fill:rgba(36,72,245,.05);stroke:#2448f5;stroke-width:1.5;stroke-dasharray:7 5}.frame.trap rect{stroke:#cf7a06}.fl{text-anchor:start;font-size:12px;font-weight:700;fill:#121417}`;
     svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    svg.insertAdjacentHTML('afterbegin', `<style>${css}</style><rect x="${svg.viewBox.baseVal.x}" y="${svg.viewBox.baseVal.y}" width="100%" height="100%" fill="#fff"/>`);
+    svg.insertAdjacentHTML('afterbegin', `<style>${css}</style><rect x="${svg.viewBox.baseVal.x}" y="${svg.viewBox.baseVal.y}" width="100%" height="100%" fill="#f1eee6"/>`);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([svg.outerHTML], { type: 'image/svg+xml' }));
     a.download = `${sc.id}-architecture.svg`;
@@ -1282,68 +1272,102 @@ let learnPaused = false, learnQuery = '';
 const learnIcon = (ic, cls = 'gx') => (PRODUCTS[ic] ? `<img class="${cls}" src="./assets/gcp/${ic}.svg" alt="">` : `<span class="${cls} emo">${ic}</span>`);
 const learnLink = (id, prefix = '📚') => { const c = conceptById(id); return c ? `<button class="learn-link" data-learn="${c.id}">${prefix} ${c.title}</button>` : ''; };
 const scenariosFor = (c) => SCENARIOS.filter((x) => x.shop.some((it) => (c.items || []).includes(it.id)));
+const nn = (c) => String(CONCEPTS.indexOf(c) + 1).padStart(2, '0');
+const chapterOf = (c) => { const i = GROUPS.findIndex(([g]) => g === c.group); return { n: String(i + 1).padStart(2, '0'), name: GROUPS[i]?.[1] || '' }; };
+let learnCur = null;
 function openLearn(id = null) {
   if (sim && S.mode === 'play' && !S.userPaused) { togglePause(); learnPaused = true; }
   closeInspector();
   learnEl.hidden = false;
+  renderLearnShell();
   id ? renderConcept(id) : renderLibrary();
   sfx('tick');
 }
 function closeLearn() {
   learnEl.hidden = true;
   learnEl.innerHTML = '';
+  learnCur = null;
   if (learnPaused && sim && S.userPaused) togglePause();
   learnPaused = false;
 }
-function renderLibrary() {
-  const q = learnQuery.trim().toLowerCase();
-  const match = (c) => !q || [c.title, c.idea, ...(c.when || []), ...(c.watch || [])].join(' ').toLowerCase().includes(q);
-  learnEl.innerHTML = `<div class="learn-card card">
-    <div class="learn-top"><div><div class="eyebrow">Learn the basics</div><h2>📚 Concepts behind every exercise</h2>
-      <p class="sub">Short, practical primers. Each one: the idea, when to use it, what goes wrong, and how to say it in an interview.</p></div>
-      <button class="insp-x learn-x" aria-label="Close">×</button></div>
-    <input class="learn-q" type="search" placeholder="Search: cache, race, queue…" value="${learnQuery.replace(/"/g, '&quot;')}" aria-label="Search concepts">
-    ${GROUPS.map(([g, name]) => {
-      const list = CONCEPTS.filter((c) => c.group === g && match(c));
-      return list.length ? `<h3 class="learn-g">${name}</h3><div class="learn-grid">${list.map((c) => `<button class="learn-tile" data-learn="${c.id}"><span class="lt-ic">${c.icon}</span><span><b>${c.title}</b><small>${c.idea.split(/(?<=[.!?])\s/)[0]}</small></span></button>`).join('')}</div>` : '';
-    }).join('') || '<p class="sub">No concept matches that search.</p>'}
-  </div>`;
+// The manual is a two-pane spread: a table of contents (with search) and the page.
+function renderLearnShell() {
+  learnEl.innerHTML = `
+    <aside class="fm-nav" aria-label="Field manual contents">
+      <div class="fm-brand"><button class="home" data-learn-home><small>System Puzzle</small><b>Field manual</b></button>
+        <button class="learn-x" aria-label="Close">${sim ? `${ICON.back}Game` : ICON.close}</button></div>
+      <input class="learn-q" type="search" placeholder="Search: cache, race, queue…" value="${learnQuery.replace(/"/g, '&quot;')}" aria-label="Search concepts">
+      <nav class="fm-toc">${GROUPS.map(([g, name], gi) => `<h4>${String(gi + 1).padStart(2, '0')} · ${name}</h4>${CONCEPTS.filter((c) => c.group === g).map((c) => `<button data-learn="${c.id}" data-toc="${c.id}"><span>§${nn(c)}</span>${c.title}</button>`).join('')}`).join('')}</nav>
+      <div class="fm-nav-foot"><span>${CONCEPTS.length} primers</span><span><kbd>Esc</kbd> close</span></div>
+    </aside>
+    <main class="fm-main" tabindex="-1"><div class="fm-progress"><i></i></div><div class="fm-page"></div></main>`;
   const inp = learnEl.querySelector('.learn-q');
-  inp.addEventListener('input', () => { learnQuery = inp.value; renderLibrary(); const i2 = learnEl.querySelector('.learn-q'); i2.focus(); i2.setSelectionRange(i2.value.length, i2.value.length); });
-  if (!q) learnEl.querySelector('.learn-x').focus({ preventScroll: true });
+  inp.addEventListener('input', () => { learnQuery = inp.value; renderLibrary(true); });
+  const main = learnEl.querySelector('.fm-main'), bar = learnEl.querySelector('.fm-progress i');
+  main.addEventListener('scroll', () => { const m = main.scrollHeight - main.clientHeight; bar.style.width = `${m > 0 ? (main.scrollTop / m) * 100 : 0}%`; }, { passive: true });
+}
+const learnMatch = () => { const q = learnQuery.trim().toLowerCase(); return (c) => !q || [c.title, c.idea, ...(c.when || []), ...(c.watch || [])].join(' ').toLowerCase().includes(q); };
+function syncToc() {
+  const match = learnMatch();
+  learnEl.querySelectorAll('[data-toc]').forEach((b) => { b.classList.toggle('on', b.dataset.toc === learnCur); b.classList.toggle('dim', !match(conceptById(b.dataset.toc))); });
+  learnEl.querySelector('[data-toc].on')?.scrollIntoView({ block: 'nearest' });
+}
+function setPage(html) {
+  const page = learnEl.querySelector('.fm-page');
+  page.innerHTML = html;
+  learnEl.querySelector('.fm-main').scrollTop = 0;
+  syncToc();
+}
+function renderLibrary(fromSearch = false) {
+  learnCur = null;
+  const match = learnMatch();
+  let k = 0;
+  const chapters = GROUPS.map(([g, name], gi) => {
+    const list = CONCEPTS.filter((c) => c.group === g && match(c));
+    return list.length ? `<section class="fm-chap" style="--d:${k++}"><div class="fm-chap-h"><small>Chapter ${String(gi + 1).padStart(2, '0')}</small><b>${name}</b></div>
+      <div class="learn-grid">${list.map((c) => `<button class="learn-tile" data-learn="${c.id}"><span class="lt-n">§${nn(c)}</span><span><b>${c.title}</b><small>${c.idea.split(/(?<=[.!?])\s/)[0]}</small></span><span class="lt-go">${ICON.arrow}</span></button>`).join('')}</div></section>` : '';
+  }).join('');
+  const list = chapters || `<p class="fm-empty">Nothing matches “${learnQuery.replace(/</g, '&lt;')}”. Try cache, queue or lock.</p>`;
+  const holder = learnEl.querySelector('.fm-chapters-list');
+  if (fromSearch && holder) { holder.classList.add('live'); holder.innerHTML = list; return syncToc(); }
+  setPage(`
+    <div class="fm-hero">
+      <div><div class="eyebrow">Field manual · Vol. 1</div>
+        <h1><span class="ln"><span>The ideas,</span></span><span class="ln"><span><em>not the answers.</em></span></span></h1>
+        <p>Short, practical primers on the concepts underneath every exercise. Each one: the idea, a picture of it, when to reach for it, what goes wrong, and how to say it out loud.</p></div>
+      <div class="fm-meta"><div><b>${CONCEPTS.length}</b><small>Primers</small></div><div><b>${String(GROUPS.length).padStart(2, '0')}</b><small>Chapters</small></div><div><b>~3′</b><small>Each</small></div></div>
+    </div>
+    <div class="fm-chapters-list">${list}</div>`);
 }
 function renderConcept(id) {
   const c = conceptById(id);
   if (!c) return renderLibrary();
+  learnCur = c.id;
   const i = CONCEPTS.indexOf(c), prev = CONCEPTS[i - 1], next = CONCEPTS[i + 1];
-  const group = GROUPS.find(([g]) => g === c.group)?.[1] || '';
-  const flow = (f) => `<div class="flow ${f.tone || ''}">${f.label ? `<span class="flow-l">${f.label}</span>` : ''}<div class="flow-row">${f.nodes.map((n, k) => `${k ? `<span class="fa"><i>${f.arrows?.[k - 1] || ''}</i></span>` : ''}<span class="fn">${learnIcon(n[0])}<span>${n[1]}</span></span>`).join('')}</div></div>`;
+  const ch = chapterOf(c);
+  const flow = (f) => `<div class="flow ${f.tone || ''}">${f.label ? `<span class="flow-l">${f.label}</span>` : ''}<div class="flow-row">${f.nodes.map((n, k) => `${k ? `<span class="fa"><i>${f.arrows?.[k - 1] || ''}</i><b style="animation-delay:${k * 0.35}s"></b></span>` : ''}<span class="fn">${learnIcon(n[0])}<span>${n[1]}</span></span>`).join('')}</div></div>`;
   const where = scenariosFor(c);
   const canStart = !sim;
-  learnEl.innerHTML = `<div class="learn-card card concept">
-    <div class="learn-top"><button class="link" data-learn-home>← All concepts</button><button class="insp-x learn-x" aria-label="Close">×</button></div>
-    <div class="eyebrow">${group}</div>
-    <h2><span class="c-ic">${c.icon}</span>${c.title}</h2>
+  const block = (title, body) => `<section class="fm-block"><h3>${title}</h3><div>${body}</div></section>`;
+  setPage(`
+    <div class="fm-crumb"><button data-learn-home>Field manual</button><span>/</span><span>Ch. ${ch.n} ${ch.name}</span><span>/</span><span>§${nn(c)}</span></div>
+    <header class="c-head"><span class="c-no" aria-hidden="true">${nn(c)}</span><div><span class="c-ic">${c.icon}</span><h1>${c.title}</h1></div></header>
     <p class="idea">${c.idea}</p>
-    ${c.flows ? `<div class="flows">${c.flows.map(flow).join('')}</div>` : ''}
-    ${c.numbers ? `<div class="numbers"><b>Rules of thumb</b><ul>${c.numbers.map((n) => `<li>${n}</li>`).join('')}</ul></div>` : ''}
-    <div class="cols learn-cols">
-      <div class="g"><h3>✓ Use it when</h3><ul>${c.when.map((x) => `<li>${x}</li>`).join('')}</ul></div>
-      <div class="r"><h3>⚠ Watch out</h3><ul>${c.watch.map((x) => `<li>${x}</li>`).join('')}</ul></div>
-    </div>
-    <div class="say"><b>💬 Say it like this</b><p>"${c.say}"</p></div>
-    ${c.game ? `<p class="game-note">🎮 ${c.game}</p>` : ''}
-    ${where.length ? `<div class="where"><b>Practice it in</b>${where.map((x) => canStart ? `<button class="where-chip" data-start="${x.id}">${x.icon} ${x.title}</button>` : `<span class="where-chip">${x.icon} ${x.title}</span>`).join('')}</div>` : ''}
-    <div class="row learn-nav"><span class="grow">${prev ? `<button class="link" data-learn="${prev.id}">← ${prev.title}</button>` : ''}</span>${next ? `<button class="link" data-learn="${next.id}">${next.title} →</button>` : ''}</div>
-  </div>`;
-  learnEl.querySelector('.learn-card').scrollTop = 0;
-  learnEl.querySelector('.learn-x').focus({ preventScroll: true });
+    ${c.flows ? block('Picture it', `<div class="flows">${c.flows.map(flow).join('')}</div>`) : ''}
+    ${c.numbers ? block('Rules of thumb', `<ol class="numbers">${c.numbers.map((n) => `<li>${n}</li>`).join('')}</ol>`) : ''}
+    ${block('Trade-offs', `<div class="learn-cols"><div class="g"><h4>Use it when</h4><ul>${c.when.map((x) => `<li>${x}</li>`).join('')}</ul></div><div class="r"><h4>Watch out</h4><ul>${c.watch.map((x) => `<li>${x}</li>`).join('')}</ul></div></div>`)}
+    ${block('Say it like this', `<blockquote class="say"><p>${c.say}</p></blockquote>`)}
+    ${c.game ? block('In the game', `<p class="game-note">${c.game}</p>`) : ''}
+    ${where.length ? block('Practice it in', `<div class="where">${where.map((x) => { const n = String(SCENARIOS.indexOf(x) + 1).padStart(2, '0'); return canStart ? `<button class="where-chip" data-start="${x.id}"><i>${n}</i>${x.icon} ${x.title}</button>` : `<span class="where-chip"><i>${n}</i>${x.icon} ${x.title}</span>`; }).join('')}</div>`) : ''}
+    <nav class="fm-pn">${prev ? `<button data-learn="${prev.id}"><small>← §${nn(prev)} Previous</small><b>${prev.title}</b></button>` : '<span></span>'}${next ? `<button data-learn="${next.id}"><small>Next §${nn(next)} →</small><b>${next.title}</b></button>` : '<span></span>'}</nav>`);
+  learnEl.querySelector('.fm-main').focus({ preventScroll: true });
 }
 document.addEventListener('click', (e) => {
   const l = e.target.closest('[data-learn]');
   if (l) { e.preventDefault(); return learnEl.hidden ? openLearn(l.dataset.learn) : (renderConcept(l.dataset.learn), sfx('tick')); }
+  if (e.target.closest('[data-learn-open]') && !e.target.closest('#hud')) return openLearn();
   if (e.target.closest('[data-learn-home]')) return renderLibrary();
-  if (e.target.closest('.learn-x') || e.target === learnEl) return closeLearn();
+  if (e.target.closest('.learn-x')) return closeLearn();
   const st = e.target.closest('[data-start]');
   if (st) { closeLearn(); try { history.replaceState(null, '', '#' + st.dataset.start); } catch {} unlockAudio(); choose(byId(st.dataset.start)); }
 });
@@ -1351,4 +1375,4 @@ document.addEventListener('click', (e) => {
 // ═════════════════════════════════════════════ boot
 const fromHash = byId(location.hash.slice(1));
 if (fromHash) choose(fromHash);
-else pickerScreen();
+else homeScreen();

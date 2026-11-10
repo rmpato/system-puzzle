@@ -5,11 +5,15 @@ System-design interview practice as a 3D whiteboard game (Three.js). Pick an exe
 ## Run
 
 ```bash
-python3 -m http.server 5199
+python3 tools/serve.py        # same as `python3 -m http.server 5199`, with caching off so edits show on reload
 # open http://localhost:5199
 ```
 
 No build step. It needs internet access for Three.js (unpkg) and the fonts. Desktop browser.
+
+## Design
+
+The visual identity is the **engineering drawing**: drafting-paper ground, one ink, a cobalt blueprint accent and a vermilion alarm. Exercises are numbered **sheets**, Learn is a **field manual** with chapters and § numbers, and the debrief is a **stamped drawing** with a grade stamp, a "Fig. 1" architecture and a title block. Type is Instrument Serif (voice), Geist (interface), Geist Mono (drafting annotations) and Kalam (the interviewer's marker). The home page opens on a live blueprint of a URL shortener with requests flowing through it. Motion respects `prefers-reduced-motion`.
 
 ## Exercises
 
@@ -46,7 +50,7 @@ Controls: drag to look around · click any part to inspect it · `Space` pause �
 
 ## Learn
 
-**📚 Learn the basics** (on the picker, or the 📚 button in-game, which pauses) is a library of 26 short primers on the concepts behind the exercises: the interview loop, estimation, latency numbers, caching, CDNs, replicas, pooling, sharding, queues, the outbox, fan-out, idempotency, races, reconciliation, delivery guarantees, WebSockets, geo indexing and more. Each one has a before/after flow sketch, when to use it, what goes wrong, rules of thumb, a line to say in the interview, and the exercises where you practice it.
+The **Field manual** (from the home page, or the book button in-game, which pauses) is a library of 26 short primers on the concepts behind the exercises: the interview loop, estimation, latency numbers, caching, CDNs, replicas, pooling, sharding, queues, the outbox, fan-out, idempotency, races, reconciliation, delivery guarantees, WebSockets, geo indexing and more. Each one has a before/after flow sketch, when to use it, what goes wrong, rules of thumb, a line to say in the interview, and the exercises where you practice it.
 
 It is also linked in context: after you answer a card (Practice mode), from the part inspector, and in the debrief under **Concepts to review** (from wrong answers, missing parts and traps). Content lives in `src/learn.js`; a card can point to a concept with `learn: '<id>'`.
 
@@ -60,11 +64,13 @@ Icons are the official set from [cloud.google.com/icons](https://cloud.google.co
 
 ```
 index.html              styles + shell
+src/home.js             landing page: live blueprint hero, exercise sheets, field manual teaser
 src/main.js             renderer and UI (data-driven, no scenario specifics)
 src/engine/sim.js       pure simulation: pools, requests, hazards, scoring, interviewer report
 src/engine/models.js    whiteboard-style 3D model library
 src/gcp.js              part → Google Cloud product icon + shop section
-src/learn.js            concept primers for the Learn library
+src/learn.js            concept primers for the field manual
+tools/serve.py          no-cache dev server
 assets/gcp/             official Google Cloud product icons (SVG)
 src/scenarios/*.js      one file per exercise (+ *-copy.js for its questions and puzzles)
 src/scenarios/index.js  registry (picker order)
