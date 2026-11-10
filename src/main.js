@@ -5,7 +5,7 @@ import { createSim } from './engine/sim.js';
 import { makeModel, INK } from './engine/models.js';
 import { SCENARIOS, byId } from './scenarios/index.js';
 import { gcpOf, iconHtml, CATS, PRODUCTS } from './gcp.js';
-import { CONCEPTS, GROUPS, TRAP_WHY, conceptById, conceptForItem, conceptForCard } from './learn.js';
+import { CONCEPTS, GROUPS, TRAP_WHY, CHECKS, conceptById, conceptForItem, conceptForCard } from './learn.js';
 import { renderHome, ICON } from './home.js';
 
 const $ = (id) => document.getElementById(id);
@@ -1069,6 +1069,7 @@ function homeScreen() {
   renderHome(homeEl, {
     mode,
     best: store.get('sp-best', {}),
+    progress: { read: progress.read.size, passed: progress.passed.size },
     onMode: (m) => { mode = m; store.set('sp-mode', mode); sfx('tick'); },
     onStart: (id) => {
       unlockAudio();
@@ -1147,19 +1148,24 @@ function answers(picked) {
 }
 
 // ── final architecture as a clean 2D diagram (GCP-style), built from the board layout
-function archSvg() {
+// model = true draws a strong reference design (every non-trap part) and highlights what the player didn't build
+function archSvg(model = false) {
+  const has = model ? (id) => !sim.item(id)?.trap : (id) => sim.has(id);
   const U = 34, TW = 128, TH = 74, GAP = 10; // px per world unit, tile size
   const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
   const short = (t, n = 18) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
   const tiles = [], frames = [];
   for (const n of sc.nodes) {
-    const label = plain(n.label) + (n.id === W.serverNode ? ` ×${serverCount()}` : '');
+    const label = plain(n.label) + (n.id === W.serverNode && !model ? ` ×${serverCount()}` : '');
     tiles.push({ key: n.id, x: n.pos[0], z: n.pos[1], label, obj: n, ext: n.model === 'external', users: n.model === 'users' });
   }
-  for (const [id, list] of Object.entries(W.items)) {
+  const placed = model
+    ? sc.shop.filter((it) => !it.trap && it.id !== W.servers?.node.item).map((it) => [it.id, [{ pos: itemSlots(it)[0] }]])
+    : Object.entries(W.items);
+  for (const [id, list] of placed) {
     const it = sim.item(id);
     for (const x of list) {
-      const t = { key: id, x: x.pos.x, z: x.pos.z, label: plain(it.label || it.name), obj: it, trap: !!it.trap };
+      const t = { key: id, x: x.pos.x, z: x.pos.z, label: plain(it.label || it.name), obj: it, trap: !!it.trap, miss: model && !sim.has(id) };
       const host = tiles.find((o) => Math.hypot(o.x - t.x, o.z - t.z) < 1.5);
       (host ? frames : tiles).push(host ? { ...t, host } : t); // a part built on top of another (Kubernetes around the API) wraps it
     }
@@ -1193,8 +1199,8 @@ function archSvg() {
   let lines = '';
   const seen = new Set();
   for (const [a, b, o = {}] of sc.wires || []) {
-    if (o.if && !sim.has(o.if)) continue;
-    if (o.unless && sim.has(o.unless)) continue;
+    if (o.if && !has(o.if)) continue;
+    if (o.unless && has(o.unless)) continue;
     for (const A of byKey[a] || []) for (const B of byKey[b] || []) {
       if (A === B || seen.has(A.key + '>' + B.key + A.cx + B.cx)) continue;
       seen.add(A.key + '>' + B.key + A.cx + B.cx);
@@ -1206,23 +1212,24 @@ function archSvg() {
   const tileSvg = (t) => {
     const g = gcpOf(sc, t.key, t.obj);
     const glyph = t.users ? '👥' : t.obj.icon || (t.ext ? '🌐' : '▫️');
-    return `<g class="tile${t.ext ? ' ext' : ''}${t.trap ? ' trap' : ''}${t.users ? ' users' : ''}" transform="translate(${(t.cx - TW / 2).toFixed(1)},${(t.cy - TH / 2).toFixed(1)})">
+    return `<g class="tile${t.ext ? ' ext' : ''}${t.trap ? ' trap' : ''}${t.users ? ' users' : ''}${t.miss ? ' miss' : ''}" transform="translate(${(t.cx - TW / 2).toFixed(1)},${(t.cy - TH / 2).toFixed(1)})">
       <rect width="${TW}" height="${TH}" rx="10"/>
       ${g.src ? `<image href="${g.src}" x="${TW / 2 - 15}" y="8" width="30" height="30"/>` : `<text class="emo" x="${TW / 2}" y="33">${glyph}</text>`}
-      <text class="nm" x="${TW / 2}" y="${g.name ? 53 : 57}">${esc(short(t.label))}</text>
-      ${g.name ? `<text class="pd" x="${TW / 2}" y="66">${esc(short(g.name, 22))}</text>` : ''}
+      <text class="nm" x="${TW / 2}" y="${g.name || t.miss ? 52 : 57}">${esc(short(t.label))}</text>
+      ${t.miss ? `<text class="pd mb" x="${TW / 2}" y="66">NOT IN YOURS</text>` : g.name ? `<text class="pd" x="${TW / 2}" y="66">${esc(short(g.name, 22))}</text>` : ''}
       <title>${esc(t.label)}${g.name ? ` · ${esc(g.name)}` : ''}</title></g>`;
   };
   const frameSvg = (f, i) => {
     const g = gcpOf(sc, f.key, f.obj), h = f.host, e = FP + i * 8;
     const x = h.cx - TW / 2 - e, y = h.cy - TH / 2 - e - 14, w = TW + e * 2, hh = TH + e * 2 + 14;
-    return `<g class="frame${f.trap ? ' trap' : ''}"><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w}" height="${hh}" rx="14"/>
+    return `<g class="frame${f.trap ? ' trap' : ''}${f.miss ? ' miss' : ''}"><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w}" height="${hh}" rx="14"/>
       ${g.src ? `<image href="${g.src}" x="${(x + 8).toFixed(1)}" y="${(y + 5).toFixed(1)}" width="16" height="16"/>` : ''}
       <text class="fl" x="${(x + (g.src ? 29 : 10)).toFixed(1)}" y="${(y + 17).toFixed(1)}">${esc(f.label)}</text></g>`;
   };
-  return `<svg class="arch" viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${(x1 - x0).toFixed(0)} ${(y1 - y0).toFixed(0)}" role="img" aria-label="Final architecture diagram">
-    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z"/></marker></defs>
-    ${frames.map(frameSvg).join('')}<g class="wires">${lines}</g>${tiles.map(tileSvg).join('')}</svg>`;
+  const mk = model ? 'ahm' : 'ah';
+  return `<svg class="arch"${model ? ' data-model hidden' : ''} viewBox="${x0.toFixed(0)} ${y0.toFixed(0)} ${(x1 - x0).toFixed(0)} ${(y1 - y0).toFixed(0)}"  role="img" aria-label="${model ? 'A strong reference design' : 'Final architecture diagram'}">
+    <defs><marker id="${mk}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z"/></marker></defs>
+    ${frames.map(frameSvg).join('')}<g class="wires">${lines.replaceAll('url(#ah)', `url(#${mk})`)}</g>${tiles.map(tileSvg).join('')}</svg>`;
 }
 
 // ── results
@@ -1262,8 +1269,10 @@ function showResults() {
       <div><small>Revenue</small><b>$${r.revenue}</b></div>
       <div><small>Reputation</small><b>${Math.round(r.rep)}</b></div>
     </div>
-    <h3>Fig. 1 — Your final architecture</h3>
-    <div class="arch-wrap">${archSvg()}</div>
+    <div class="fig-head"><h3 class="fig-t">Fig. 1 — Your final architecture</h3>
+      <div class="segment sm" role="radiogroup" aria-label="Diagram" data-v="practice"><button role="radio" aria-checked="true" data-fig="mine">Yours</button><button role="radio" aria-checked="false" data-fig="model">Strong design</button></div></div>
+    <div class="arch-wrap">${archSvg()}${archSvg(true)}</div>
+    <p class="fig-note" hidden>A strong answer uses every non-trap part. Blue tiles are the ones your design was missing.</p>
     ${snapshots.length ? `<details class="evo-d"><summary>How it evolved, phase by phase (${snapshots.length})</summary><div class="evo">${snapshots.map((s) => `<figure><img src="${s.url}" alt="Architecture after ${s.name}" /><figcaption>${s.name}</figcaption></figure>`).join('')}</div></details>` : ''}
     <div class="cols">
       <div class="g"><h3>✓ Signals</h3><ul>${r.signals.map((s) => `<li>${s}</li>`).join('') || '<li>None</li>'}</ul></div>
@@ -1280,15 +1289,25 @@ function showResults() {
     <div class="titleblock"><div><small>Project</small><b>${sc.title}</b></div><div><small>Sheet</small><b>${String(SCENARIOS.indexOf(sc) + 1).padStart(2, '0')} / ${String(SCENARIOS.length).padStart(2, '0')}</b></div><div><small>Mode</small><b>${interview() ? 'Interview' : 'Practice'}</b></div><div><small>Date</small><b>${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</b></div><div><small>Grade</small><b>${r.grade}${isBest ? ' · best' : ''}</b></div></div>
     <div class="row"><span class="grow"><button class="link" id="others">← Other exercises</button></span><button class="btn alt" id="dl">⬇ Diagram</button><button class="btn alt" id="copy">Copy summary</button><button class="btn" id="again">Play again</button></div>
   `, 'wide results');
+  modal.querySelectorAll('[data-fig]').forEach((b) => b.addEventListener('click', () => {
+    const m = b.dataset.fig === 'model';
+    b.parentElement.dataset.v = m ? 'interview' : 'practice';
+    b.parentElement.querySelectorAll('button').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+    modal.querySelectorAll('svg.arch').forEach((svg) => svg.toggleAttribute('hidden', svg.hasAttribute('data-model') !== m)); // SVG elements have no .hidden property
+    modal.querySelector('.fig-t').textContent = m ? 'Fig. 2 — A strong design' : 'Fig. 1 — Your final architecture';
+    modal.querySelector('.fig-note').hidden = !m;
+    sfx('tick');
+  }));
   $('again').addEventListener('click', () => location.reload());
   $('others').addEventListener('click', toPicker);
   $('dl').addEventListener('click', async (e) => {
     // standalone SVG: inline the stylesheet and the icons so it opens anywhere (docs, slides, feedback forms)
-    const svg = modal.querySelector('svg.arch').cloneNode(true);
+    const svg = modal.querySelector('svg.arch:not([hidden])').cloneNode(true);
+    svg.removeAttribute('data-model');
     for (const im of svg.querySelectorAll('image')) {
       try { const txt = await (await fetch(im.getAttribute('href'))).text(); im.setAttribute('href', 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(txt)))); } catch {}
     }
-    const css = `text{text-anchor:middle;font-family:'Geist',Arial,sans-serif}.wires line{stroke:#121417;stroke-width:1.6}marker path{fill:#121417}.tile rect{fill:#fbfaf6;stroke:#121417;stroke-width:1.6}.tile.ext rect{fill:#e8e3d7;stroke:#6d675c;stroke-dasharray:5 4}.tile.trap rect{stroke:#cf7a06;stroke-width:2}.tile.users rect{fill:#fff3bf}.nm{font-size:13.5px;font-weight:600;fill:#121417}.pd{font-size:10.5px;fill:#6d675c}.emo{font-size:22px}.frame rect{fill:rgba(36,72,245,.05);stroke:#2448f5;stroke-width:1.5;stroke-dasharray:7 5}.frame.trap rect{stroke:#cf7a06}.fl{text-anchor:start;font-size:12px;font-weight:700;fill:#121417}`;
+    const css = `text{text-anchor:middle;font-family:'Geist',Arial,sans-serif}.wires line{stroke:#121417;stroke-width:1.6}marker path{fill:#121417}.tile rect{fill:#fbfaf6;stroke:#121417;stroke-width:1.6}.tile.ext rect{fill:#e8e3d7;stroke:#6d675c;stroke-dasharray:5 4}.tile.trap rect{stroke:#cf7a06;stroke-width:2}.tile.users rect{fill:#fff3bf}.nm{font-size:13.5px;font-weight:600;fill:#121417}.pd{font-size:10.5px;fill:#6d675c}.emo{font-size:22px}.frame rect{fill:rgba(36,72,245,.05);stroke:#2448f5;stroke-width:1.5;stroke-dasharray:7 5}.frame.trap rect{stroke:#cf7a06}.fl{text-anchor:start;font-size:12px;font-weight:700;fill:#121417}.tile.miss rect{fill:#e7eaff;stroke:#2448f5;stroke-width:2}.mb{fill:#2448f5;font-weight:600;letter-spacing:.1em}`;
     svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     svg.insertAdjacentHTML('afterbegin', `<style>${css}</style><rect x="${svg.viewBox.baseVal.x}" y="${svg.viewBox.baseVal.y}" width="100%" height="100%" fill="#f1eee6"/>`);
     const a = document.createElement('a');
@@ -1317,6 +1336,9 @@ const scenariosFor = (c) => SCENARIOS.filter((x) => x.shop.some((it) => (c.items
 const nn = (c) => String(CONCEPTS.indexOf(c) + 1).padStart(2, '0');
 const chapterOf = (c) => { const i = GROUPS.findIndex(([g]) => g === c.group); return { n: String(i + 1).padStart(2, '0'), name: GROUPS[i]?.[1] || '' }; };
 let learnCur = null;
+// per-viewer progress: primers opened, and checks answered right
+const progress = { read: new Set(store.get('sp-read', [])), passed: new Set(store.get('sp-passed', [])) };
+const saveProgress = () => { store.set('sp-read', [...progress.read]); store.set('sp-passed', [...progress.passed]); };
 function openLearn(id = null) {
   if (sim && S.mode === 'play' && !S.userPaused) { togglePause(); learnPaused = true; }
   closeInspector();
@@ -1351,7 +1373,15 @@ function renderLearnShell() {
 const learnMatch = () => { const q = learnQuery.trim().toLowerCase(); return (c) => !q || [c.title, c.idea, ...(c.when || []), ...(c.watch || [])].join(' ').toLowerCase().includes(q); };
 function syncToc() {
   const match = learnMatch();
-  learnEl.querySelectorAll('[data-toc]').forEach((b) => { b.classList.toggle('on', b.dataset.toc === learnCur); b.classList.toggle('dim', !match(conceptById(b.dataset.toc))); });
+  learnEl.querySelectorAll('[data-toc]').forEach((b) => {
+    const id = b.dataset.toc;
+    b.classList.toggle('on', id === learnCur);
+    b.classList.toggle('dim', !match(conceptById(id)));
+    b.classList.toggle('read', progress.read.has(id));
+    b.classList.toggle('passed', progress.passed.has(id));
+  });
+  const f = learnEl.querySelector('.fm-nav-foot span');
+  if (f) f.textContent = `${progress.read.size}/${CONCEPTS.length} read · ${progress.passed.size} checked`;
   learnEl.querySelector('[data-toc].on')?.scrollIntoView({ block: 'nearest' });
 }
 function setPage(html) {
@@ -1367,7 +1397,7 @@ function renderLibrary(fromSearch = false) {
   const chapters = GROUPS.map(([g, name], gi) => {
     const list = CONCEPTS.filter((c) => c.group === g && match(c));
     return list.length ? `<section class="fm-chap" style="--d:${k++}"><div class="fm-chap-h"><small>Chapter ${String(gi + 1).padStart(2, '0')}</small><b>${name}</b></div>
-      <div class="learn-grid">${list.map((c) => `<button class="learn-tile" data-learn="${c.id}"><span class="lt-n">§${nn(c)}</span><span><b>${c.title}</b><small>${c.idea.split(/(?<=[.!?])\s/)[0]}</small></span><span class="lt-go">${ICON.arrow}</span></button>`).join('')}</div></section>` : '';
+      <div class="learn-grid">${list.map((c) => `<button class="learn-tile ${progress.passed.has(c.id) ? 'passed' : progress.read.has(c.id) ? 'read' : ''}" data-learn="${c.id}"><span class="lt-n">§${nn(c)}</span><span><b>${c.title}</b><small>${c.idea.split(/(?<=[.!?])\s/)[0]}</small></span><span class="lt-go">${ICON.arrow}</span></button>`).join('')}</div></section>` : '';
   }).join('');
   const list = chapters || `<p class="fm-empty">Nothing matches “${learnQuery.replace(/</g, '&lt;')}”. Try cache, queue or lock.</p>`;
   const holder = learnEl.querySelector('.fm-chapters-list');
@@ -1377,7 +1407,7 @@ function renderLibrary(fromSearch = false) {
       <div><div class="eyebrow">Field manual · Vol. 1</div>
         <h1><span class="ln"><span>The ideas,</span></span><span class="ln"><span><em>not the answers.</em></span></span></h1>
         <p>Short, practical primers on the concepts underneath every exercise. Each one: the idea, a picture of it, when to reach for it, what goes wrong, and how to say it out loud.</p></div>
-      <div class="fm-meta"><div><b>${CONCEPTS.length}</b><small>Primers</small></div><div><b>${String(GROUPS.length).padStart(2, '0')}</b><small>Chapters</small></div><div><b>~3′</b><small>Each</small></div></div>
+      <div class="fm-meta"><div><b>${CONCEPTS.length}</b><small>Primers</small></div><div><b>${progress.read.size}</b><small>Read</small></div><div><b>${progress.passed.size}</b><small>Checked ✓</small></div></div>
     </div>
     <div class="fm-chapters-list">${list}</div>`);
 }
@@ -1385,6 +1415,7 @@ function renderConcept(id) {
   const c = conceptById(id);
   if (!c) return renderLibrary();
   learnCur = c.id;
+  if (!progress.read.has(c.id)) { progress.read.add(c.id); saveProgress(); }
   const i = CONCEPTS.indexOf(c), prev = CONCEPTS[i - 1], next = CONCEPTS[i + 1];
   const ch = chapterOf(c);
   const flow = (f) => `<div class="flow ${f.tone || ''}">${f.label ? `<span class="flow-l">${f.label}</span>` : ''}<div class="flow-row">${f.nodes.map((n, k) => `${k ? `<span class="fa"><i>${f.arrows?.[k - 1] || ''}</i><b style="animation-delay:${k * 0.35}s"></b></span>` : ''}<span class="fn">${learnIcon(n[0])}<span>${n[1]}</span></span>`).join('')}</div></div>`;
@@ -1400,11 +1431,26 @@ function renderConcept(id) {
     ${block('Trade-offs', `<div class="learn-cols"><div class="g"><h4>Use it when</h4><ul>${c.when.map((x) => `<li>${x}</li>`).join('')}</ul></div><div class="r"><h4>Watch out</h4><ul>${c.watch.map((x) => `<li>${x}</li>`).join('')}</ul></div></div>`)}
     ${block('Say it like this', `<blockquote class="say"><p>${c.say}</p></blockquote>`)}
     ${c.game ? block('In the game', `<p class="game-note">${c.game}</p>`) : ''}
+    ${CHECKS[c.id] ? block('Check yourself', `<div class="check" data-check="${c.id}"><p class="check-q">${CHECKS[c.id].q}</p><div class="check-o">${CHECKS[c.id].options.map((o, k) => `<button class="opt" data-k="${k}">${o}</button>`).join('')}</div><p class="check-why" hidden></p></div>`) : ''}
     ${where.length ? block('Practice it in', `<div class="where">${where.map((x) => { const n = String(SCENARIOS.indexOf(x) + 1).padStart(2, '0'); return canStart ? `<button class="where-chip" data-start="${x.id}"><i>${n}</i>${x.icon} ${x.title}</button>` : `<span class="where-chip"><i>${n}</i>${x.icon} ${x.title}</span>`; }).join('')}</div>`) : ''}
     <nav class="fm-pn">${prev ? `<button data-learn="${prev.id}"><small>← §${nn(prev)} Previous</small><b>${prev.title}</b></button>` : '<span></span>'}${next ? `<button data-learn="${next.id}"><small>Next §${nn(next)} →</small><b>${next.title}</b></button>` : '<span></span>'}</nav>`);
   learnEl.querySelector('.fm-main').focus({ preventScroll: true });
 }
 document.addEventListener('click', (e) => {
+  const ck = e.target.closest('.check .opt');
+  if (ck && !ck.disabled) {
+    const box = ck.closest('.check'), id = box.dataset.check, C = CHECKS[id], k = +ck.dataset.k, ok = k === C.answer;
+    box.querySelectorAll('.opt').forEach((b, j) => { b.disabled = true; b.classList.toggle('right', j === C.answer); b.classList.toggle('wrong', j === k && !ok); });
+    const w = box.querySelector('.check-why');
+    w.hidden = false;
+    w.innerHTML = `<b>${ok ? 'Right.' : 'Not quite.'}</b> ${C.why}`;
+    w.className = `check-why ${ok ? 'ok' : 'no'}`;
+    if (ok && !progress.passed.has(id)) { progress.passed.add(id); saveProgress(); syncToc(); }
+    if (!ok) box.insertAdjacentHTML('beforeend', '<button class="link check-retry">Try again</button>');
+    sfx(ok ? 'good' : 'bad');
+    return;
+  }
+  if (e.target.closest('.check-retry')) { const id = e.target.closest('.check').dataset.check; renderConcept(id); learnEl.querySelector('.check')?.scrollIntoView({ block: 'center' }); return; }
   const l = e.target.closest('[data-learn]');
   if (l) { e.preventDefault(); return learnEl.hidden ? openLearn(l.dataset.learn) : (renderConcept(l.dataset.learn), sfx('tick')); }
   if (e.target.closest('[data-learn-open]') && !e.target.closest('#hud')) return openLearn();

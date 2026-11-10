@@ -94,7 +94,8 @@ const STEP_ART = [
    <path class="s" d="M110 24 H210 M110 42 H196 M110 60 H206 M110 78 H170" style="stroke:var(--line);stroke-width:5;stroke-linecap:round"/></svg>`,
 ];
 
-export function renderHome(root, { mode, best, onStart, onMode, onLearn }) {
+export function renderHome(root, { mode, best, progress = { read: 0, passed: 0 }, onStart, onMode }) {
+  const played = Object.keys(best).length;
   const sheets = SCENARIOS.map((s, i) => {
     const d = String(s.difficulty).toLowerCase();
     const stack = [...new Set(s.nodes.concat(s.shop.filter((x) => !x.trap)).map((o) => gcpOf(s, o.id, o).product).filter(Boolean))].slice(0, 6);
@@ -141,7 +142,7 @@ export function renderHome(root, { mode, best, onStart, onMode, onLearn }) {
         <div><b>${pad(SCENARIOS.length)}</b><small>Exercises</small></div>
         <div><b>${CONCEPTS.length}</b><small>Concept primers</small></div>
         <div><b>${SCENARIOS.reduce((a, s) => a + Object.keys(s.cards || {}).length + Object.keys(s.puzzles || {}).length, 0)}</b><small>Whiteboard calls</small></div>
-        <div><b>~10<span style="font-size:.5em"> min</span></b><small>Per round</small></div>
+        ${played || progress.read ? `<div class="you"><b>${played}<span style="font-size:.5em">/${SCENARIOS.length}</span></b><small>You've played</small></div><div class="you"><b>${progress.passed}<span style="font-size:.5em">/${CONCEPTS.length}</span></b><small>Concepts checked</small></div>` : `<div><b>~10<span style="font-size:.5em"> min</span></b><small>Per round</small></div>`}
       </div>
     </div>
     ${plate()}
@@ -172,7 +173,8 @@ export function renderHome(root, { mode, best, onStart, onMode, onLearn }) {
       <div class="fm-teaser-l">
         <div><div class="eyebrow">§ 03 — Field manual</div><h2>The ideas, <em>not the answers.</em></h2></div>
         <p>${CONCEPTS.length} short primers on the concepts underneath every exercise: what it is, when to reach for it, what goes wrong, and one line to say in the interview.</p>
-        <button class="btn lg" data-learn-open>Open the field manual <span class="arr">${ICON.arrow}</span></button>
+        <div class="fm-prog"><span><i style="width:${(progress.read / CONCEPTS.length) * 100}%"></i></span><small>${progress.read ? `${progress.read} of ${CONCEPTS.length} read · ${progress.passed} checked` : 'Start anywhere; each primer takes ~3 minutes'}</small></div>
+        <button class="btn lg" data-learn-open>${progress.read ? 'Continue reading' : 'Open the field manual'} <span class="arr">${ICON.arrow}</span></button>
       </div>
       <div class="fm-chapters">${GROUPS.map(([g, name], i) => {
         const list = CONCEPTS.filter((c) => c.group === g);

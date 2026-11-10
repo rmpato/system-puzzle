@@ -382,6 +382,7 @@
   /* architecture diagram (debrief) */
   .arch-wrap { margin: 10px 0 12px; padding: 10px; border: 1px solid var(--line); border-radius: 4px; background: var(--paper) radial-gradient(rgba(18,20,23,.16) 1px, transparent 1.2px) 0 0 / 16px 16px; overflow-x: auto; }
   svg.arch { display: block; width: 100%; height: auto; min-width: 560px; }
+  svg.arch[hidden] { display: none; }
   .arch .wires line { stroke: var(--ink); stroke-width: 1.4; }
   .arch marker path { fill: var(--ink); }
   .arch .tile rect { fill: var(--card); stroke: var(--ink); stroke-width: 1.2; }
@@ -395,6 +396,12 @@
   .arch .frame.trap rect { fill: rgba(207,122,6,.06); stroke: var(--warn); }
   .arch .fl { text-anchor: start; font-size: 11px; font-weight: 600; fill: var(--ink); font-family: var(--font-mono); letter-spacing: .06em; }
   .arch .emo { font-size: 22px; }
+  .arch .tile.miss rect { fill: var(--blue-bg); stroke: var(--blue); stroke-width: 2; }
+  .arch .mb { fill: var(--blue); font-weight: 600; letter-spacing: .1em; }
+  .fig-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 4px; }
+  .fig-head h3 { margin: 0; }
+  .segment.sm button { padding: 6px 13px; font-size: 12px; }
+  .fig-note { margin: -4px 0 12px; font-size: 13px; color: var(--muted); }
 
   /* shared learn bits used inside game cards */
   .learn-link { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(36,72,245,.3); background: var(--blue-bg); color: var(--blue-2); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; font-weight: 500; transition: border-color .15s, background .15s, transform .2s var(--ease-out); }
@@ -556,6 +563,11 @@
   .fm-teaser-l h2 { font-size: clamp(50px, 5.4vw, 84px); line-height: .9; letter-spacing: -.03em; margin: 12px 0 0; }
   .fm-teaser-l h2 em { color: #8ea0ff; }
   .fm-teaser-l p { color: #bab4a8; margin: 0; font-size: 15px; max-width: 26em; }
+  .fm-prog { display: grid; gap: 8px; }
+  .fm-prog span { height: 3px; background: #2d3037; border-radius: 2px; overflow: hidden; }
+  .fm-prog i { display: block; height: 100%; background: #8ea0ff; }
+  .fm-prog small { font: 500 10.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: #9f998d; }
+  .hero-stats .you b { color: var(--blue); }
   .fm-teaser .btn { background: var(--paper); color: var(--ink); border-color: var(--paper); justify-self: start; }
   .fm-teaser .btn:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
   .fm-chapters { display: grid; grid-template-columns: 1fr 1fr; border-left: 1px solid #2d3037; }
@@ -599,6 +611,18 @@
   .fm-toc button.dim { opacity: .28; }
   .fm-toc button.on.dim { opacity: 1; }
   .fm-chapters-list.live .fm-chap { animation: none; }
+  .fm-toc button.read::after { content: '·'; margin-left: auto; color: var(--muted); }
+  .fm-toc button.passed::after { content: '✓'; margin-left: auto; color: var(--good); font-size: 12px; }
+  .fm-toc button.on.passed::after { color: #7fd6a4; }
+  .learn-tile.passed .lt-n { color: var(--good); }
+  .learn-tile.passed .lt-n::after { content: ' ✓'; }
+  .check-q { margin: 0 0 14px; font: 400 24px/1.25 var(--font-display); letter-spacing: -.005em; max-width: 34em; }
+  .check-o { display: grid; gap: 8px; }
+  .check .opt { text-align: left; }
+  .check-why { margin: 14px 0 0; padding: 12px 14px; border-radius: 10px; font-size: 14.5px; }
+  .check-why.ok { background: var(--good-bg); }
+  .check-why.no { background: var(--bad-bg); }
+  .check-retry { margin-top: 10px; }
   .fm-nav-foot { padding: 14px 20px; border-top: 1px solid var(--line); font: 500 10.5px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
   .learn-x { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--card); border-radius: 99px; padding: 7px 12px 7px 10px; font: 500 12px var(--font-body); transition: border-color .2s; white-space: nowrap; }
   .learn-x:hover { border-color: var(--ink); }
