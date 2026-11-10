@@ -285,7 +285,8 @@ function syncGhosts() {
     if (s.trap && hotGhost !== s.id) continue;
     const g = new THREE.Group();
     const size = s.ghost || 2.6;
-    const sq = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(size, size)), hotGhost === s.id ? ghostHot : S.hint[s.id] && !interview() ? ghostLine : ghostQuiet);
+    const hintedG = (S.hint[s.id] || uiHint.has(s.id)) && !interview();
+    const sq = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(size, size)), hotGhost === s.id ? ghostHot : hintedG ? ghostLine : ghostQuiet);
     sq.computeLineDistances();
     sq.rotation.x = -Math.PI / 2;
     sq.position.y = 0.04;
@@ -295,7 +296,7 @@ function syncGhosts() {
     hit.userData.buy = s.id;
     g.add(sq, hit);
     g.position.copy(slotFor(s.id, sim.count(s.id)).setY(0));
-    const hinted = S.hint[s.id] && !interview();
+    const hinted = hintedG;
     const div = label(g, `<div class="gi">${ico(s.id, s, 'gx big')}<span class="gn">+ ${s.name}</span><span class="gp">$${sim.price(s.id)}</span></div>`, 0.4, 'ghost' + (hotGhost === s.id ? ' hot' : '') + (hinted ? ' hint' : '') + (hotGhost === s.id || hinted ? '' : ' quiet'));
     W.ghosts.add(g);
     ghosts[s.id] = { g, div, hit };
@@ -372,6 +373,7 @@ function floatText(pos, text, bad = false) {
   setTimeout(() => { scene.remove(o); d.remove(); }, 1000);
 }
 let shake = 0, cash = 0, cashAt = null, cashT = 0;
+const CASH_OFFSET = new THREE.Vector3(2.6, 0, 1.2);
 const fails = {}, failRate = {}; let failT = performance.now(); // requests failing per node, per second
 const topOf = (key) => posOf(key, 0, (W.nodes[key]?.h ?? 2.4) + 1);
 
@@ -384,7 +386,7 @@ function hookSim() {
       case 'spawn': {
         const from = orbPoint(p.from), to = orbPoint(p.to);
         const m = getOrb(orbMats[p.type] || Object.values(orbMats)[0], !!p.ring);
-        if (p.ring && p.race !== lastRace) { lastRace = p.race; floatText(from.clone().setY(from.y + 1.2), '⚔ 2 requests race for one item'); }
+        if (p.ring && p.race !== lastRace) { lastRace = p.race; floatText(from.clone().setY(from.y + 1.2), '⚔ 2 requests race for one item', true); }
         place(m, from);
         live.set(p.id, { m, c: curve(from, to, p.kind === 'event' ? 1.6 : 2.6), r: p });
         break;
@@ -600,7 +602,7 @@ function frame(now) {
     W.spinners.forEach((s) => (s.rotation.z += dt * 0.4));
     if (running) {
       cashT += dt;
-      if (cashT > 0.45 && cash) { floatText(topOf(cashAt).setY(3.6), `+$${cash}`); sfx('coin'); cash = 0; cashT = 0; }
+      if (cashT > 0.45 && cash) { floatText(posOf(cashAt, 0, 1.2).add(CASH_OFFSET), `+$${cash}`); /* beside the part, never over its label */ sfx('coin'); cash = 0; cashT = 0; }
     }
   }
   if (shake > 0) {
@@ -675,19 +677,36 @@ addEventListener('keydown', (e) => {
 });
 
 let shopSig = '';
+// Practice mode: when a part is overloaded, nudge the cheapest real fix: something that removes load first, scaling last.
+let uiHint = new Set();
+function overloadHints() {
+  const out = new Set();
+  if (interview() || !playing()) return out;
+  const worst = Object.entries(sc.pools).filter(([, pool]) => (S.nodeLoad[pool.node] || 0) >= 1.05)
+    .sort(([, a], [, b]) => (S.nodeLoad[b.node] || 0) - (S.nodeLoad[a.node] || 0));
+  for (const [pid] of worst) {
+    const relief = sc.shop.filter((it) => !it.trap && !sim.has(it.id) && (it.relieves === pid
+      || Object.values(sc.types).some((t) => (t.steps || []).some((st) => st.pool === pid && st.mods?.[it.id] !== undefined && st.mods[it.id] < 1))));
+    const pick = relief[0] || sc.shop.find((it) => it.scales === pid && sim.count(it.id) < (it.max || 99));
+    if (pick && !S.hint[pick.id]) { out.add(pick.id); break; } // one suggestion at a time, for the worst part
+    if (pick) break;
+  }
+  return out;
+}
 function renderShop() {
   const shop = $('shop');
   shop.hidden = !playing();
   if (!playing()) return;
   const pct = (s) => Math.max(0, Math.min(100, Math.round((S.money / sim.price(s.id)) * 20) * 5));
-  const sig = sc.shop.map((s) => [sim.count(s.id), sim.price(s.id), sim.affordable(s.id), sim.onCredit(s.id), waitFor(s.id), pct(s), !!S.hint[s.id]].join()).join('|');
+  uiHint = overloadHints();
+  const sig = sc.shop.map((s) => [sim.count(s.id), sim.price(s.id), sim.affordable(s.id), sim.onCredit(s.id), waitFor(s.id), pct(s), !!S.hint[s.id], uiHint.has(s.id)].join()).join('|');
   if (sig === shopSig) return;
   shopSig = sig;
   const tile = (s) => {
     const i = shopOrder.indexOf(s);
     const n = sim.count(s.id), max = s.max || 1, price = sim.price(s.id);
     const done = n >= max, poor = !done && !sim.affordable(s.id), credit = !done && sim.onCredit(s.id), wait = poor ? waitFor(s.id) : 0;
-    return `<button class="item ${s.trap ? 'trap' : ''} ${done ? 'done' : ''} ${poor ? 'poor' : ''} ${credit ? 'credit' : ''} ${S.hint[s.id] && !done && !interview() ? 'hint' : ''}" data-id="${s.id}" aria-disabled="${done || poor}" aria-label="${s.name}, $${price}">
+    return `<button class="item ${s.trap ? 'trap' : ''} ${done ? 'done' : ''} ${poor ? 'poor' : ''} ${credit ? 'credit' : ''} ${(S.hint[s.id] || uiHint.has(s.id)) && !done && !interview() ? 'hint' : ''}" data-id="${s.id}" aria-disabled="${done || poor}" aria-label="${s.name}, $${price}">
       ${i < 9 ? `<span class="k">${i + 1}</span>` : ''}<span class="ic">${ico(s.id, s, 'gx')}</span>${max > 1 && n ? `<span class="n">×${n}</span>` : ''}
       <b>${s.name}</b>
       <span class="p">${done ? '✓ built' : credit ? `💳 $${price}` : `$${price}`}</span>${wait ? `<i class="wait">⏱ ${wait}s</i>` : ''}

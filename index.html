@@ -145,6 +145,8 @@
   @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(226,57,31,.18); } }
   .legend { display: flex; gap: 12px; align-items: center; font-size: 12px; font-weight: 500; }
   .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+  .legend > span { white-space: nowrap; }
+  .legend.top { flex-wrap: wrap; row-gap: 4px; max-width: 760px; }
   .legend i.ev { border-radius: 2px; transform: rotate(45deg); }
   .lg-h { font: 500 10.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
   .lg-h + span { margin-left: -4px; }
@@ -239,6 +241,7 @@
   .chip.wrong { background: var(--bad-bg); border-color: var(--bad); }
   .chip.miss { border-color: var(--good); border-style: dashed; }
   .chip.off { opacity: .4; }
+  .chip code, .bucket code { background: none; padding: 0; }
   .chip small { display: block; font: 400 14px var(--font-hand); color: var(--muted); }
   .sort { display: grid; gap: 8px; text-align: left; }
   .sort-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; }

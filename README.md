@@ -33,7 +33,7 @@ Every exercise ends with a real traffic surge (a viral link, a doorbuster, midni
 
 ## Modes
 
-- **🎓 Practice:** each answer is explained right away, and the shop glows toward the fix for the current incident.
+- **🎓 Practice:** each answer is explained right away, and the shop glows toward the fix for the current incident. When a part is overloaded, it suggests the cheapest real fix: something that removes load (cache, CDN, rate limiter) before more servers.
 
 **Budget:** you start with $200; good clarifying questions add $25, correct cards $40. A fix you named correctly on a card is half price and can be bought on credit (budget goes negative and refills from revenue), so knowing the answer is never blocked by money. Unaffordable parts show ⏱ seconds until affordable.
 - **🧑‍⚖️ Interview:** for running it with a candidate. No hints, and answers are recorded but not revealed. The debrief has the full answer review.
@@ -42,15 +42,16 @@ Every exercise ends with a real traffic surge (a viral link, a doorbuster, midni
 
 1. **Brief + 3 clarifying questions.** Good ones add budget; skipping questions or over-engineering questions are red flags.
 2. **3–4 phases of traffic.** Colored requests flow through the board. Buy parts from the bottom bar (or keys `1`–`9`, or click the dashed slots). Overloaded parts turn red. Traps (Kubernetes, microservices, sharding too early…) cost upkeep.
-3. **Incidents** fire when the problem actually happens: duplicates, races, outages, timeouts, hot databases, connection limits.
+Every purchase shows an **impact card** with what it changed ("+100% capacity on API", "Postgres work −80% for redirects", "Prevents: double charges", upkeep), derived from the scenario data. Traps say why they are over-engineering at this scale.
+3. **Incidents** fire when the problem actually happens (the first race is a visible near miss, so you can react): duplicates, races, outages, timeouts, hot databases, connection limits.
 4. **Whiteboard breaks** between phases: order, pick and sort puzzles plus single-choice cards.
-5. **Debrief:** grade, uptime, judgement, revenue, reputation, a timelapse of how the architecture evolved, signals and red flags (proactive vs reactive), **Ask next** follow-ups for the interviewer, the answer review, a timeline, and **Copy summary**.
+5. **Debrief:** grade, uptime, judgement, revenue, reputation, your final architecture next to a **strong design** (missing parts highlighted), a timelapse of how the architecture evolved, signals and red flags (proactive vs reactive), **Ask next** follow-ups for the interviewer, the answer review, a timeline, and **Copy summary**.
 
 Reading the board: every part is labeled with its Google Cloud product and live load (%), every dashed square names the part you can buy there and its price, the legend names each request color, and red means failing. Controls: drag to look around · click any part to inspect it · `Space` pause · `M` mute · `1`–`9` buy · `1×/2×` speed.
 
 ## Learn
 
-The **Field manual** (from the home page, or the book button in-game, which pauses) is a library of 29 short primers on the concepts behind the exercises: the interview loop, estimation, API and data model design, latency numbers, choosing a database, caching, CDNs, replicas, pooling, sharding, queues, the outbox, fan-out, idempotency, races, reconciliation, timeouts/retries/circuit breakers, delivery guarantees, WebSockets, geo indexing and more. Each one has a before/after flow sketch, when to use it, what goes wrong, rules of thumb, a line to say in the interview, and the exercises where you practice it.
+The **Field manual** (from the home page, or the book button in-game, which pauses) is a library of 29 short primers on the concepts behind the exercises: the interview loop, estimation, API and data model design, latency numbers, choosing a database, caching, CDNs, replicas, pooling, sharding, queues, the outbox, fan-out, idempotency, races, reconciliation, timeouts/retries/circuit breakers, delivery guarantees, WebSockets, geo indexing and more. Each one has a before/after flow sketch, when to use it, what goes wrong, rules of thumb, a line to say in the interview, a **Check yourself** question, and the exercises where you practice it. Reading progress (read / checked) is kept per browser and shown in the contents and on the home page.
 
 It is also linked in context: after you answer a card (Practice mode), from the part inspector, and in the debrief under **Concepts to review** (from wrong answers, missing parts and traps). Content lives in `src/learn.js`; a card can point to a concept with `learn: '<id>'`.
 
