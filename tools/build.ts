@@ -1,5 +1,5 @@
 // Static build: `bun run build` → dist/, for any static host.
-//   BASE_PATH=/system-puzzle/ bun tools/build.ts   (or `bun run build:pages`) for a sub-path such as GitHub Pages.
+//   BASE_PATH=/under-load/ bun tools/build.ts   (or `bun run build:pages`) for a sub-path such as GitHub Pages.
 // Pages live at nested URLs (/play/<id>, /guide/<concept>), so the bundle is referenced from the base,
 // the base is written into <meta name="app-base"> for the client router and asset URLs (src/base.js),
 // and dist/404.html is a copy of the app for hosts that serve it on unknown paths (GitHub Pages, Netlify,
