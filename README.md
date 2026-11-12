@@ -4,7 +4,7 @@ System-design interview practice as a 3D whiteboard game (Three.js). Pick an exe
 
 ## Run
 
-A [Bun](https://bun.sh) app. Live preview: https://rmpato.github.io/system-puzzle/
+A [Bun](https://bun.sh) app. Live preview: https://rmpato.github.io/under-load/
 
 ```bash
 bun install
